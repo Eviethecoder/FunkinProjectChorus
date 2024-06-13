@@ -44,6 +44,10 @@ import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.StickerSubState;
 import funkin.util.MathUtil;
 import lime.utils.Assets;
+import flixel.tweens.misc.ShakeTween;
+import funkin.effects.IntervalShake;
+import funkin.ui.freeplay.SongMenuItem.FreeplayRank;
+import funkin.api.discord.Discord.DiscordClient;
 
 /**
  * Parameters used to initialize the FreeplayState.
@@ -236,8 +240,10 @@ class FreeplayState extends MusicBeatSubState
       stickerSubState.degenStickers();
     }
 
+    #if discord_rpc
     // Updating Discord Rich Presence
     DiscordClient.changePresence('In the Menus', null);
+    #end
 
     var isDebug:Bool = false;
 

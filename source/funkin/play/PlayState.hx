@@ -247,6 +247,11 @@ class PlayState extends MusicBeatSubState
   public var cameraZoomTween:FlxTween;
 
   /**
+   * An FlxTween that changes the additive speed to the desired amount.
+   */
+  public var scrollSpeedTweens:Array<FlxTween> = [];
+
+  /**
    * The camera follow point from the last stage.
    * Used to persist the position of the `cameraFollowPosition` between levels.
    */
@@ -688,14 +693,14 @@ class PlayState extends MusicBeatSubState
     {
       initStage();
       initCharacters();
+      initHealthBar();
+      initicons();
+      initStrumlines();
     }
     else
     {
       initMinimalMode();
     }
-    initHealthBar();
-    initicons();
-    initStrumlines();
 
     // Initialize the judgements and combo meter.
     comboPopUps = new PopUpStuff();
@@ -2856,7 +2861,6 @@ class PlayState extends MusicBeatSubState
               totalNotesHit: Highscore.tallies.totalNotesHit,
               totalNotes: Highscore.tallies.totalNotes,
             },
-          accuracy: Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes,
         };
 
       // adds current song data into the tallies for the level (story levels)
@@ -2893,7 +2897,7 @@ class PlayState extends MusicBeatSubState
               score: PlayStatePlaylist.campaignScore,
               tallies:
                 {
-                  // TODO: Sum up the values for the whole level!
+                  // TODO: Sum up the values for the whole Week!
                   sick: 0,
                   good: 0,
                   bad: 0,
@@ -2904,7 +2908,6 @@ class PlayState extends MusicBeatSubState
                   totalNotesHit: 0,
                   totalNotes: 0,
                 },
-              accuracy: Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes,
             };
 
           if (Save.instance.isLevelHighScore(PlayStatePlaylist.campaignId, PlayStatePlaylist.campaignDifficulty, data))
@@ -3141,7 +3144,7 @@ class PlayState extends MusicBeatSubState
   /**
    * Move to the results screen right goddamn now.
    */
-  function moveToResultsScreen(isNewHighscore:Bool):Void
+  function moveToResultsScreen(isNewHighscore:Bool, ?prevScoreData:SaveScoreData):Void
   {
     persistentUpdate = false;
     vocals.stop();
@@ -3152,7 +3155,10 @@ class PlayState extends MusicBeatSubState
     var res:ResultState = new ResultState(
       {
         storyMode: PlayStatePlaylist.isStoryMode,
+        songId: currentChart.song.id,
+        difficultyId: currentDifficulty,
         title: PlayStatePlaylist.isStoryMode ? ('${PlayStatePlaylist.campaignTitle}') : ('${currentChart.songName} by ${currentChart.songArtist}'),
+        prevScoreData: prevScoreData,
         scoreData:
           {
             score: PlayStatePlaylist.isStoryMode ? PlayStatePlaylist.campaignScore : songScore,
@@ -3168,11 +3174,10 @@ class PlayState extends MusicBeatSubState
                 totalNotesHit: talliesToUse.totalNotesHit,
                 totalNotes: talliesToUse.totalNotes,
               },
-            accuracy: Highscore.tallies.totalNotesHit / Highscore.tallies.totalNotes,
           },
         isNewHighscore: isNewHighscore
       });
-    res.camera = camHUD;
+    this.persistentDraw = false;
     openSubState(res);
   }
 
@@ -3294,6 +3299,60 @@ class PlayState extends MusicBeatSubState
   {
     cancelCameraFollowTween();
     cancelCameraZoomTween();
+  }
+
+  var prevScrollTargets:Array<Dynamic> = []; // used to snap scroll speed when things go unruely
+
+  /**
+   * The magical function that shall tween the scroll speed.
+   */
+  public function tweenScrollSpeed(?speed:Float, ?duration:Float, ?ease:Null<Float->Float>, strumlines:Array<String>):Void
+  {
+    // Cancel the current tween if it's active.
+    cancelScrollSpeedTweens();
+
+    // Snap to previous event value to prevent the tween breaking when another event cancels the previous tween.
+    for (i in prevScrollTargets)
+    {
+      var value:Float = i[0];
+      var strum:Strumline = Reflect.getProperty(this, i[1]);
+      strum.scrollSpeed = value;
+    }
+
+    // for next event, clean array.
+    prevScrollTargets = [];
+
+    for (i in strumlines)
+    {
+      var value:Float = speed;
+      var strum:Strumline = Reflect.getProperty(this, i);
+
+      if (duration == 0)
+      {
+        strum.scrollSpeed = value;
+      }
+      else
+      {
+        scrollSpeedTweens.push(FlxTween.tween(strum,
+          {
+            'scrollSpeed': value
+          }, duration, {ease: ease}));
+      }
+      // make sure charts dont break if the charter is dumb and stupid
+      prevScrollTargets.push([value, i]);
+    }
+  }
+
+  public function cancelScrollSpeedTweens()
+  {
+    for (tween in scrollSpeedTweens)
+    {
+      if (tween != null)
+      {
+        tween.cancel();
+      }
+    }
+    scrollSpeedTweens = [];
   }
 
   #if (debug || FORCE_DEBUG_VERSION)

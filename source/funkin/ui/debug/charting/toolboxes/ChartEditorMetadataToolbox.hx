@@ -62,6 +62,7 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
     this.x = 150;
     this.y = 250;
 
+    trace(inputSongName);
     inputSongName.onChange = function(event:UIEvent) {
       var valid:Bool = event.target.text != null && event.target.text != '';
 
@@ -89,10 +90,11 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
         chartEditorState.currentSongMetadata.artist = '';
       }
     };
-
+    trace(inputSongCharter);
     inputSongCharter.onChange = function(event:UIEvent) {
       var valid:Bool = event.target.text != null && event.target.text != '';
 
+      trace(valid);
       if (valid)
       {
         inputSongCharter.removeClass('invalid-value');
