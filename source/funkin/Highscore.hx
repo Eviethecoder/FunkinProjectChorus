@@ -23,6 +23,22 @@ class Highscore
    * @param baseTally The second tally
    * @return The combined tally
    */
+  public static function floorDecimal(value:Float, decimals:Int):Float
+  {
+    if (decimals < 1)
+    {
+      return Math.floor(value);
+    }
+
+    var tempMult:Float = 1;
+    for (i in 0...decimals)
+    {
+      tempMult *= 10;
+    }
+    var newValue:Float = Math.floor(value * tempMult);
+    return newValue / tempMult;
+  }
+
   public static function combineTallies(newTally:Tallies, baseTally:Tallies):Tallies
   {
     var combinedTally:Tallies = new Tallies();
@@ -31,6 +47,7 @@ class Highscore
     combinedTally.bad = newTally.bad + baseTally.bad;
     combinedTally.good = newTally.good + baseTally.good;
     combinedTally.sick = newTally.sick + baseTally.sick;
+    combinedTally.killer = newTally.killer + baseTally.killer;
     combinedTally.totalNotes = newTally.totalNotes + baseTally.totalNotes;
     combinedTally.totalNotesHit = newTally.totalNotesHit + baseTally.totalNotesHit;
 
@@ -56,6 +73,7 @@ abstract Tallies(RawTallies)
         bad: 0,
         good: 0,
         sick: 0,
+        killer: 0,
         totalNotes: 0,
         totalNotesHit: 0,
         maxCombo: 0,
@@ -81,6 +99,7 @@ typedef RawTallies =
   var bad:Int;
   var good:Int;
   var sick:Int;
+  var killer:Int;
   var maxCombo:Int;
 
   var score:Int;

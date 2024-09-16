@@ -96,32 +96,38 @@ class FocusCameraSongEvent extends SongEvent
         var bfPoint = currentStage.getBoyfriend().cameraFocusPoint;
         targetX += bfPoint.x;
         targetY += bfPoint.y;
+        PlayState.instance.camFocus = 'Boyfriend';
 
       case 1: // Dad (focus on opponent)
         if (currentStage.getDad() == null)
         {
           trace('No dad to focus on.');
+          PlayState.instance.camFocus = 'Dad';
           return;
         }
         trace('Focusing camera on opponent.');
         var dadPoint = currentStage.getDad().cameraFocusPoint;
         targetX += dadPoint.x;
         targetY += dadPoint.y;
+        PlayState.instance.camFocus = 'Dad';
 
       case 2: // Girlfriend (focus on girlfriend)
         if (currentStage.getGirlfriend() == null)
         {
           trace('No GF to focus on.');
+          PlayState.instance.camFocus = 'Gf';
           return;
         }
         trace('Focusing camera on girlfriend.');
         var gfPoint = currentStage.getGirlfriend().cameraFocusPoint;
         targetX += gfPoint.x;
         targetY += gfPoint.y;
+        PlayState.instance.camFocus = 'Gf';
 
       default:
         trace('Unknown camera focus: ' + data);
     }
+    trace(PlayState.instance.camFocus);
 
     // Apply tween based on ease.
     switch (ease)

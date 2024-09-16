@@ -61,7 +61,9 @@ class Stage extends FlxSpriteGroup implements IPlayStateScriptedClass implements
   public var maskTexture:BitmapData;
 
   var namedProps:Map<String, StageProp> = new Map<String, StageProp>();
-  var characters:Map<String, BaseCharacter> = new Map<String, BaseCharacter>();
+
+  public var characters:Map<String, BaseCharacter> = new Map<String, BaseCharacter>();
+
   var boppers:Array<Bopper> = new Array<Bopper>();
 
   /**

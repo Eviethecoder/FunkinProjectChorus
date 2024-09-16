@@ -36,6 +36,21 @@ class BaseCharacter extends Bopper
   public var holdTimer:Float = 0;
 
   /**
+   * the type of hold note style you need. defaults to default
+   */
+  public var holdtype:String;
+
+  /**
+   * the frame to look for
+   */
+  public var holdframeDetect:Int;
+
+  /**
+   * the frame to revert to
+   */
+  public var holdframeRevert:Int;
+
+  /**
    * so this is for healthcolors...idk what else to say
    */
   public var healthcolor:Array<Int>;
@@ -197,6 +212,10 @@ class BaseCharacter extends Bopper
       this.flipX = _data.flipX;
       this.healthcolor = _data.healthcolor;
       this.notestyle = _data.notestyle;
+      this.holdtype = _data.holdAnim.style;
+      this.holdframeDetect = _data.holdAnim.frame;
+      this.holdframeRevert = _data.holdAnim.framerevert;
+      trace(holdtype);
     }
 
     shouldBop = false;
@@ -361,6 +380,46 @@ class BaseCharacter extends Bopper
     }
   }
 
+  // oh god this was not the best idea *dies*
+  public function holdanims(value:CharacterType):Void
+  {
+    switch (value)
+    {
+      case(GF):
+        return; // gf and others arnt supported just yet
+      case(OTHER):
+        return;
+      case(BF):
+        for (holdNote in PlayState.instance.playerStrumline.holdNotes.members)
+        {
+          if (holdNote == null || !holdNote.alive) continue;
+          if (holdNote.hitNote && !holdNote.missedNote && holdNote.sustainLength > 0)
+          {
+            if (isSinging() && this.animation.curAnim.curFrame >= holdframeDetect)
+            {
+              this.animation.curAnim.curFrame = holdframeRevert; // if this works im a god. - kuru
+            }
+          }
+        }
+
+      case(DAD):
+        for (holdNote in PlayState.instance.opponentStrumline.holdNotes.members)
+        {
+          if (holdNote == null || !holdNote.alive) continue;
+          if (holdNote.hitNote && !holdNote.missedNote && holdNote.sustainLength > 0)
+          {
+            if (this.isSinging() && this.animation.curAnim.curFrame >= 7)
+            {
+              if (isSinging() && this.animation.curAnim.curFrame >= holdframeDetect)
+              {
+                this.animation.curAnim.curFrame = holdframeRevert; // if this works im a god. - kuru
+              }
+            }
+          }
+        }
+    }
+  }
+
   public override function onUpdate(event:UpdateScriptEvent):Void
   {
     super.onUpdate(event);
@@ -383,13 +442,23 @@ class BaseCharacter extends Bopper
     // and Darnell (this keeps the flame on his lighter flickering).
     // Works for idle, singLEFT/RIGHT/UP/DOWN, alt singing animations, and anything else really.
 
-    if (!getCurrentAnimation().endsWith('-hold') && hasAnimation(getCurrentAnimation() + '-hold') && isAnimationFinished())
+    // doing animations how satan intended.....kill me now
+
+    /**
+     *  since project chorus only comes with 2 types. its an if statment. if you add more turn it to a switch
+     * if not Fancy styled. do base game hold anim check
+     */
+
+    if (holdtype != 'fancy')
     {
-      playAnimation(getCurrentAnimation() + '-hold');
+      if (!getCurrentAnimation().endsWith('-hold') && hasAnimation(getCurrentAnimation() + '-hold') && isAnimationFinished())
+      {
+        playAnimation(getCurrentAnimation() + '-hold'); // we doing og base game style to preserve the weekend/dad and mom
+      }
     }
-    if (!getCurrentAnimation().endsWith('-end') && hasAnimation(getCurrentAnimation() + '-end') && isAnimationFinished())
+    else
     {
-      playAnimation(getCurrentAnimation() + '-end');
+      holdanims(characterType);
     }
 
     // Handle character note hold time.
@@ -407,6 +476,7 @@ class BaseCharacter extends Bopper
 
       // Without this check here, the player character would only play the `sing` animation
       // for one beat, as opposed to holding it as long as the player is holding the button.
+
       var shouldStopSinging:Bool = (this.characterType == BF) ? !isHoldingNote() : true;
 
       FlxG.watch.addQuick('singTimeSec-${characterId}', singTimeSec);
@@ -414,6 +484,11 @@ class BaseCharacter extends Bopper
       {
         trace('holdTimer reached ${holdTimer}sec (> ${singTimeSec}), stopping sing animation');
         holdTimer = 0;
+        // if (!getCurrentAnimation().endsWith('-end') && hasAnimation(getCurrentAnimation() + '-end') && isAnimationFinished())
+        // {
+        //   playAnimation(getCurrentAnimation() + '-end');
+        //   trace('doing animation revert');
+        // }
         dance(true);
       }
     }
@@ -506,16 +581,30 @@ class BaseCharacter extends Bopper
   {
     super.onNoteHit(event);
 
-    if (event.note.noteData.getMustHitNote() && characterType == BF)
+    if (event.note.noteData.getMustHitNote() && characterType == BF && event.note.noteData.kind != 'noanim')
     {
       // If the note is from the same strumline, play the sing animation.
-      this.playSingAnimation(event.note.noteData.getDirection(), false);
+      if (event.note.noteData.kind == 'Alt')
+      { // if more built in notes are added. make a switch
+        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
+      }
+      else
+      {
+        this.playSingAnimation(event.note.noteData.getDirection(), false);
+      }
+
       holdTimer = 0;
     }
-    else if (!event.note.noteData.getMustHitNote() && characterType == DAD)
+    else if (!event.note.noteData.getMustHitNote() && characterType == DAD && event.note.noteData.kind != 'noanim')
     {
-      // If the note is from the same strumline, play the sing animation.
-      this.playSingAnimation(event.note.noteData.getDirection(), false);
+      if (event.note.noteData.kind == 'Alt')
+      { // if more built in notes are added. make a switch
+        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
+      }
+      else
+      {
+        this.playSingAnimation(event.note.noteData.getDirection(), false);
+      }
       holdTimer = 0;
     }
   }

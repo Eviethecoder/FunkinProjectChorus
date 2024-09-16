@@ -49,9 +49,6 @@ class SongDataMigrator
     result.stage = input.stage;
     result.characters = input.characters;
 
-    // Renamed
-    result.noteStyle = input.noteSkin;
-
     // Added
     result.ratings = ['default' => 1];
     result.album = null;
@@ -93,9 +90,6 @@ class SongDataMigrator
     // Added
     result.ratings = ['default' => 1];
     result.album = null;
-
-    // Renamed
-    result.noteStyle = input.noteSkin;
 
     // Fetch the first playable character and migrate it.
     var firstCharKey:Null<String> = input.playableChars.size() == 0 ? null : input.playableChars.keys().array()[0];

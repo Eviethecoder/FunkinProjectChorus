@@ -150,6 +150,9 @@ class ChartEditorDropdowns
     // Base
     "" => "Default",
     "~CUSTOM~" => "Custom",
+    // custom built in notekinds
+    "noanim" => "No animation",
+    "Alt" => "alt",
     // Weeks 1-7
     "mom" => "Mom Sings (Week 5)",
     "ugh" => "Ugh (Week 7)",

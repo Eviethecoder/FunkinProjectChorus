@@ -125,6 +125,7 @@ class SaveDataMigrator
         // accuracy: inputSaveData.songCompletion.get('${levelId}-easy') ?? 0.0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,
@@ -144,6 +145,7 @@ class SaveDataMigrator
         // accuracy: inputSaveData.songCompletion.get('${levelId}') ?? 0.0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,
@@ -163,6 +165,7 @@ class SaveDataMigrator
         // accuracy: inputSaveData.songCompletion.get('${levelId}-hard') ?? 0.0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,
@@ -184,6 +187,7 @@ class SaveDataMigrator
         score: 0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,
@@ -208,6 +212,7 @@ class SaveDataMigrator
         score: 0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,
@@ -232,6 +237,7 @@ class SaveDataMigrator
         score: 0,
         tallies:
           {
+            killer: 0,
             sick: 0,
             good: 0,
             bad: 0,

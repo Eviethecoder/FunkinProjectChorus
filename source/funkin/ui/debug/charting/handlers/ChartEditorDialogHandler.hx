@@ -639,15 +639,6 @@ class ChartEditorDialogHandler
     var startingValueStage = ChartEditorDropdowns.populateDropdownWithStages(inputStage, newSongMetadata.playData.stage);
     inputStage.value = startingValueStage;
 
-    var inputNoteStyle:Null<DropDown> = dialog.findComponent('inputNoteStyle', DropDown);
-    if (inputNoteStyle == null) throw 'Could not locate inputNoteStyle DropDown in Song Metadata dialog';
-    inputNoteStyle.onChange = function(event:UIEvent) {
-      if (event.data.id == null) return;
-      newSongMetadata.playData.noteStyle = event.data.id;
-    };
-    var startingValueNoteStyle = ChartEditorDropdowns.populateDropdownWithNoteStyles(inputNoteStyle, newSongMetadata.playData.noteStyle);
-    inputNoteStyle.value = startingValueNoteStyle;
-
     var inputCharacterPlayer:Null<DropDown> = dialog.findComponent('inputCharacterPlayer', DropDown);
     if (inputCharacterPlayer == null) throw 'ChartEditorToolboxHandler.buildToolboxMetadataLayout() - Could not find inputCharacterPlayer component.';
     inputCharacterPlayer.onChange = function(event:UIEvent) {
@@ -808,8 +799,11 @@ class ChartEditorDialogHandler
         }
         songVariationMetadataEntry.onClick = onClickMetadataVariation.bind(variation).bind(songVariationMetadataEntryLabel);
         #if FILE_DROP_SUPPORTED
-        state.addDropHandler({component: songVariationMetadataEntry, handler: onDropFileMetadataVariation.bind(variation)
-          .bind(songVariationMetadataEntryLabel)});
+        state.addDropHandler(
+          {
+            component: songVariationMetadataEntry,
+            handler: onDropFileMetadataVariation.bind(variation).bind(songVariationMetadataEntryLabel)
+          });
         #end
         chartContainerB.addComponent(songVariationMetadataEntry);
 
@@ -1174,10 +1168,6 @@ class ChartEditorDialogHandler
     var startingValueStage = ChartEditorDropdowns.populateDropdownWithStages(dialogStage, state.currentSongMetadata.playData.stage);
     dialogStage.value = startingValueStage;
 
-    var dialogNoteStyle:Null<DropDown> = dialog.findComponent('dialogNoteStyle', DropDown);
-    if (dialogNoteStyle == null) throw 'Could not locate dialogNoteStyle DropDown in Add Variation dialog';
-    dialogNoteStyle.value = state.currentSongMetadata.playData.noteStyle;
-
     var dialogCharacterPlayer:Null<DropDown> = dialog.findComponent('dialogCharacterPlayer', DropDown);
     if (dialogCharacterPlayer == null) throw 'Could not locate dialogCharacterPlayer DropDown in Add Variation dialog';
     dialogCharacterPlayer.value = ChartEditorDropdowns.populateDropdownWithCharacters(dialogCharacterPlayer, CharacterType.BF,
@@ -1211,7 +1201,6 @@ class ChartEditorDialogHandler
       var pendingVariation:SongMetadata = new SongMetadata(dialogSongName.text, dialogSongArtist.text, dialogVariationName.text.toLowerCase());
 
       pendingVariation.playData.stage = dialogStage.value.id;
-      pendingVariation.playData.noteStyle = dialogNoteStyle.value;
       pendingVariation.timeChanges[0].bpm = dialogBPM.value;
 
       state.songMetadata.set(pendingVariation.variation, pendingVariation);

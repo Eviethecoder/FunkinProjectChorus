@@ -19,7 +19,7 @@ class Constants
    * The title of the game, for debug printing purposes.
    * Change this if you're making an engine.
    */
-  public static final TITLE:String = "Friday Night Funkin'";
+  public static final TITLE:String = "FNF: Project Chorus";
 
   /**
    * The current version number of the game.
@@ -69,6 +69,7 @@ class Constants
    * Preloader sitelock.
    * Matching is done by `FlxStringUtil.getDomain`, so any URL on the domain will work.
    * The first link in this list is the one users will be redirected to if they try to access the game from a different URL.
+   * kuru here. if your making an official place to play your mod. change thr lock to that website
    */
   public static final SITE_LOCK:Array<String> = [
     "https://www.newgrounds.com/portal/view/770371", // Newgrounds, baybee!
@@ -113,12 +114,12 @@ class Constants
   // ==============================
 
   /**
-   * The color used by the enemy health bar.
+   * The color used by the enemy health bar. kept in for scripting
    */
   public static final COLOR_HEALTH_BAR_RED:FlxColor = 0xFFFF0000;
 
   /**
-   * The color used by the player health bar.
+   * The color used by the player health bar.kept in for scripting
    */
   public static final COLOR_HEALTH_BAR_GREEN:FlxColor = 0xFF66FF33;
 
@@ -148,7 +149,7 @@ class Constants
   public static final COLOR_PRELOADER_LOCK_BG:FlxColor = 0xFF1B1717;
 
   /**
-   * Color for the preloader site lock foreground
+   * Color for the preloader site lock foreground-
    */
   public static final COLOR_PRELOADER_LOCK_FG:FlxColor = 0xB96F10;
 

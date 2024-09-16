@@ -346,6 +346,22 @@ class StoryMenuState extends MusicBeatState
           changeDifficulty(-1);
         }
 
+        #if !html5
+        if (FlxG.mouse.wheel != 0)
+        {
+          changeLevel(-Math.round(FlxG.mouse.wheel));
+        }
+        #else
+        if (FlxG.mouse.wheel < 0)
+        {
+          changeLevel(-Math.round(FlxG.mouse.wheel / 8));
+        }
+        else if (FlxG.mouse.wheel > 0)
+        {
+          changeLevel(-Math.round(FlxG.mouse.wheel / 8));
+        }
+        #end
+
         if (controls.UI_RIGHT)
         {
           rightDifficultyArrow.animation.play('press');

@@ -391,6 +391,7 @@ class CharacterDataParser
   static final DEFAULT_FRAMERATE:Int = 24;
   static final DEFAULT_ISPIXEL:Bool = false;
   static final DEFAULT_LOOP:Bool = false;
+  static final DEFAULT_HOLDSTYLE:String = 'default';
   static final DEFAULT_NOTESTYLE:String = 'funkin';
   static final DEFAULT_NAME:String = 'Untitled Character';
   static final DEFAULT_OFFSETS:Array<Float> = [0, 0];
@@ -472,6 +473,30 @@ class CharacterDataParser
         };
     }
 
+    if (input.holdAnim == null)
+    {
+      input.holdAnim =
+        {
+          style: DEFAULT_HOLDSTYLE,
+          frame: null,
+          framerevert: null,
+        };
+    }
+
+    if (input.holdAnim.style == null)
+    {
+      input.holdAnim.style = DEFAULT_HOLDSTYLE;
+    }
+
+    if (input.holdAnim.frame == null)
+    {
+      input.holdAnim.frame = 0;
+    }
+    if (input.holdAnim.framerevert == null)
+    {
+      input.holdAnim.framerevert = 0;
+    }
+
     if (input.healthIcon.id == null)
     {
       input.healthIcon.id = id;
@@ -511,11 +536,6 @@ class CharacterDataParser
     {
       input.healthIcon.isPixel = input.isPixel;
     }
-    if (input.healthIcon.type == null)
-    {
-      input.healthIcon.type = 'og';
-    }
-
     if (input.healthIcon.type == null)
     {
       input.healthIcon.type = 'og';
@@ -673,6 +693,8 @@ typedef CharacterData =
    */
   var healthIcon:Null<HealthIconData>;
 
+  var holdAnim:Null<HoldAnimsData>;
+
   var death:Null<DeathData>;
 
   /**
@@ -732,6 +754,28 @@ typedef CharacterData =
    */
   var flipX:Null<Bool>;
 };
+
+/**
+ * hold anim data.
+ */
+typedef HoldAnimsData =
+{
+  /**
+   * the hold anim type. default is normal base game. improved is the project chorus anims. with custom hold frame data.
+   * can eather hold on one frame or do the "fnf Jitter"
+   */
+  var style:Null<String>;
+
+  /**
+   * the frame to look for when a note is hold
+   */
+  var frame:Null<Int>;
+
+  /**
+   * the frame to go back to
+   */
+  var framerevert:Null<Int>;
+}
 
 /**
  * The JSON data schema used to define the health icon for a character.

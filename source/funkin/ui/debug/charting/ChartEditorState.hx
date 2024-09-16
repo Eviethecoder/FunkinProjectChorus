@@ -19,6 +19,7 @@ import flixel.system.debug.log.LogStyle;
 import flixel.system.FlxAssets.FlxSoundAsset;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
+import funkin.play.notes.StrumlineNote;
 import flixel.tweens.FlxTween;
 import flixel.tweens.misc.VarTween;
 import flixel.util.FlxColor;
@@ -29,6 +30,8 @@ import funkin.audio.visualize.PolygonSpectogram;
 import funkin.audio.VoicesGroup;
 import funkin.audio.waveform.WaveformSprite;
 import funkin.data.notestyle.NoteStyleRegistry;
+import funkin.data.notestyle.NoteStyleData;
+import funkin.play.notes.notestyle.NoteStyle;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongChartData;
 import funkin.data.song.SongData.SongEventData;
@@ -179,6 +182,11 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
    * The height of the playhead, in pixels.
    */
   public static final PLAYHEAD_HEIGHT:Int = Std.int(GRID_SIZE / 8);
+
+  /**
+   * strumline for vortex shit (to be added)
+   */
+  public var strumlinenote:FlxTypedGroup<StrumlineNote>;
 
   /**
    * The width of the border between grid squares, where the crosshair changes from "Place Notes" to "Select Notes".
@@ -580,6 +588,14 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
    * The currently selected live input style.
    */
   var currentLiveInputStyle:ChartEditorLiveInputStyle = None;
+
+  /**
+   * the charting buddies shit
+   */
+  var lilBf:FlxSprite;
+
+  var lilStage:FlxSprite;
+  var lilOpp:FlxSprite;
 
   /**
    * If true, playtesting a chart will skip to the current playhead position.
@@ -1401,17 +1417,12 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
   function get_currentSongNoteStyle():String
   {
-    if (currentSongMetadata.playData.noteStyle == null)
-    {
-      // Initialize to the default value if not set.
-      currentSongMetadata.playData.noteStyle = Constants.DEFAULT_NOTE_STYLE;
-    }
-    return currentSongMetadata.playData.noteStyle;
+    return Constants.DEFAULT_NOTE_STYLE;
   }
 
   function set_currentSongNoteStyle(value:String):String
   {
-    return currentSongMetadata.playData.noteStyle = value;
+    return Constants.DEFAULT_NOTE_STYLE;
   }
 
   var currentSongFreeplayPreviewStart(get, set):Int;
@@ -2198,6 +2209,40 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     buildMeasureTicks();
     buildNotePreview();
 
+    lilStage = new FlxSprite(32, 432).loadGraphic(Paths.image("ui/chart-editor/lilStage"), true, 256, 256);
+    lilStage.animation.add('idle', [0, 1], 0);
+    lilStage.animation.play('idle');
+    lilStage.scrollFactor.set();
+    add(lilStage);
+
+    lilBf = new FlxSprite(32, 432).loadGraphic(Paths.image("ui/chart-editor/lilBf"), true, 300, 256);
+    lilBf.animation.add("idle", [0, 1], 12, true);
+    lilBf.animation.add("0", [3, 4, 5], 12, false);
+    lilBf.animation.add("1", [6, 7, 8], 12, false);
+    lilBf.animation.add("2", [9, 10, 11], 12, false);
+    lilBf.animation.add("3", [12, 13, 14], 12, false);
+    lilBf.animation.add("yeah", [17, 20, 23], 12, false);
+    lilBf.animation.play("idle");
+    lilBf.animation.finishCallback = function(name:String) {
+      lilBf.animation.play("idle", true, false, lilBf.animation.getByName("idle").numFrames - 2);
+    }
+    lilBf.scrollFactor.set();
+    add(lilBf);
+
+    lilOpp = new FlxSprite(lilStage.x + 20, 432);
+    lilOpp.frames = Paths.getSparrowAtlas('ui/chart-editor/lilOpp');
+    lilOpp.animation.addByPrefix('idle', 'idle', 24, true);
+    lilOpp.animation.addByPrefix('0', 'left', 24, false);
+    lilOpp.animation.addByPrefix('1', 'down', 24, false);
+    lilOpp.animation.addByPrefix('2', 'up', 24, false);
+    lilOpp.animation.addByPrefix('3', 'right', 24, false);
+    lilOpp.animation.play("idle");
+    lilOpp.animation.finishCallback = function(name:String) {
+      lilOpp.animation.play("idle", true, false, lilOpp.animation.getByName("idle").numFrames - 2);
+    }
+    lilOpp.scrollFactor.set();
+    add(lilOpp);
+
     buildAdditionalUI();
     populateOpenRecentMenu();
     this.applyPlatformShortcutText();
@@ -2527,6 +2572,22 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     notePreviewPlayhead.zIndex = 31;
 
     setNotePreviewViewportBounds(calculateNotePreviewViewportBounds());
+
+    strumlinenote = new FlxTypedGroup<StrumlineNote>();
+    for (i in 0...4)
+    {
+      var thenoteStyle:NoteStyle = NoteStyleRegistry.instance.fetchDefault();
+      var note:StrumlineNote = new StrumlineNote(thenoteStyle, false, i);
+      note.setGraphicSize(GRID_SIZE, GRID_SIZE);
+      note.updateHitbox();
+      note.x = GRID_X_POS * (i + 0.3);
+      note.y = notePreview.y;
+      note.playAnimation('static', false, false, 0);
+      note.zIndex = 33;
+      strumlinenote.add(note);
+      note.scrollFactor.set(1, 1);
+    }
+    add(strumlinenote);
   }
 
   function setSelectionBoxBounds(bounds:FlxRect = null):Void
@@ -6279,7 +6340,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
   }
 
   /**
-   * Handle the playback of hitsounds.
+   * Handle the playback of hitsounds./ handels the hit times for charting buddies
    */
   function handleHitsounds(oldSongPosition:Float, newSongPosition:Float):Void
   {
@@ -6307,6 +6368,8 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
       var event:NoteScriptEvent = new HitNoteScriptEvent(tempNote, 0.0, 0, 'perfect', 0);
       dispatchEvent(event);
 
+      // notehit handeler
+
       // Calling event.cancelEvent() skips all the other logic! Neat!
       if (event.eventCanceled) continue;
 
@@ -6314,9 +6377,18 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
       switch (noteData.getStrumlineIndex())
       {
         case 0: // Player
-          if (hitsoundVolumePlayer > 0) this.playSound(Paths.sound('chartingSounds/hitNotePlayer'), hitsoundVolumePlayer);
+          if (hitsoundVolumePlayer > 0)
+          {
+            this.playSound(Paths.sound('noteHitSounds/' + Preferences.noteHitSound), hitsoundVolumePlayer);
+            lilBf.animation.play("" + noteData.getDirection(), true);
+          }
+
         case 1: // Opponent
-          if (hitsoundVolumeOpponent > 0) this.playSound(Paths.sound('chartingSounds/hitNoteOpponent'), hitsoundVolumeOpponent);
+          if (hitsoundVolumeOpponent > 0)
+          {
+            this.playSound(Paths.sound('noteHitSounds/' + Preferences.noteHitSoundopp), hitsoundVolumeOpponent);
+            lilOpp.animation.play("" + noteData.getDirection(), true);
+          }
       }
     }
   }
@@ -6337,12 +6409,16 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     {
       // Pause
       stopAudioPlayback();
+      lilOpp.animation.play("idle");
+      lilBf.animation.play("idle");
       fadeInWelcomeMusic(WELCOME_MUSIC_FADE_IN_DELAY, WELCOME_MUSIC_FADE_IN_DURATION);
     }
     else
     {
       // Play
       startAudioPlayback();
+      lilOpp.animation.play("idle");
+      lilBf.animation.play("idle");
       stopWelcomeMusic();
     }
   }

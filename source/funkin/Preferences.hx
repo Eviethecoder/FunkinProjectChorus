@@ -27,6 +27,82 @@ class Preferences
   }
 
   /**
+   * if you want notehit sounds during gameplay .
+   * @default `false`
+   */
+  public static var noteHitSound(get, set):String;
+
+  static function get_noteHitSound():String
+  {
+    return Save?.instance?.options?.noteHitSound;
+  }
+
+  static function set_noteHitSound(value:String):String
+  {
+    var save:Save = Save.instance;
+    save.options.noteHitSound = value;
+    save.flush();
+    return value;
+  }
+
+  /**
+   * if you want notehit sounds during gameplay .
+   * @default `false`
+   */
+  public static var noteHitSoundopp(get, set):String;
+
+  static function get_noteHitSoundopp():String
+  {
+    return Save?.instance?.options?.noteHitSoundopp;
+  }
+
+  static function set_noteHitSoundopp(value:String):String
+  {
+    var save:Save = Save.instance;
+    save.options.noteHitSoundopp = value;
+    save.flush();
+    return value;
+  }
+
+  /**
+   * The timebar type. defaults to classic
+   * @default `classic`
+   */
+  public static var timebar(get, set):String;
+
+  static function get_timebar():String
+  {
+    return Save?.instance?.options?.timebar;
+  }
+
+  static function set_timebar(value:String):String
+  {
+    var save:Save = Save.instance;
+    save.options.timebar = value;
+    save.flush();
+    return value;
+  }
+
+  /**
+   * notehitsound volume .
+   * @default `50`
+   */
+  public static var noteHitSoundVolume(get, set):Int;
+
+  static function get_noteHitSoundVolume():Int
+  {
+    return Save?.instance?.options?.noteHitSoundVolume;
+  }
+
+  static function set_noteHitSoundVolume(value:Int):Int
+  {
+    var save:Save = Save.instance;
+    save.options.noteHitSoundVolume = value;
+    save.flush();
+    return value;
+  }
+
+  /**
    * If enabled, the strumline is centered
    * @default `false`
    */

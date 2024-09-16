@@ -378,6 +378,8 @@ class ResultState extends MusicBeatSubState
     var extraYOffset:Float = 7;
 
     hStuf += 2;
+    var tallykiller:TallyCounter = new TallyCounter(330, (hStuf * 5) + extraYOffset, params.scoreData.tallies.killer, 0xFFE59289);
+    ratingGrp.add(tallykiller);
 
     var tallySick:TallyCounter = new TallyCounter(230, (hStuf * 5) + extraYOffset, params.scoreData.tallies.sick, 0xFF89E59E);
     ratingGrp.add(tallySick);
@@ -464,7 +466,8 @@ class ResultState extends MusicBeatSubState
   {
     bgFlash.visible = true;
     FlxTween.tween(bgFlash, {alpha: 0}, 5 / 24);
-    var clearPercentFloat = (params.scoreData.tallies.sick + params.scoreData.tallies.good) / params.scoreData.tallies.totalNotes * 100;
+    var clearPercentFloat = (params.scoreData.tallies.killer + (params.scoreData.tallies.sick / 2) +
+      (params.scoreData.tallies.good / 3)) / params.scoreData.tallies.totalNotes * 100;
     clearPercentTarget = Math.floor(clearPercentFloat);
     // Prevent off-by-one errors.
 

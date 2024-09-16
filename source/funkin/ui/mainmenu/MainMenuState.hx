@@ -355,6 +355,7 @@ class MainMenuState extends MusicBeatState
           score: 1,
           tallies:
             {
+              killer: 0,
               sick: 0,
               good: 0,
               bad: 0,

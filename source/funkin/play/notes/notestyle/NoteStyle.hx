@@ -81,7 +81,6 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
   {
     // Apply the note sprite frames.
     var atlas:FlxAtlasFrames = buildNoteFrames(false);
-
     if (atlas == null)
     {
       throw 'Could not load spritesheet for note style: $id';

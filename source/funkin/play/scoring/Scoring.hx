@@ -162,8 +162,8 @@ class Scoring
 
     return switch (absTiming)
     {
-      // case(_ < PBOT1_KILLER_THRESHOLD) => true:
-      //   'killer';
+      case(_ < PBOT1_KILLER_THRESHOLD) => true:
+        'killer';
       case(_ < PBOT1_SICK_THRESHOLD) => true:
         'sick';
       case(_ < PBOT1_GOOD_THRESHOLD) => true:
@@ -462,15 +462,15 @@ enum abstract ScoringRank(String)
     {
       case PERFECT_GOLD | PERFECT:
         // return 2.5;
-        return 95/24;
+        return 95 / 24;
       case EXCELLENT:
         return 0;
       case GREAT:
-        return 5/24;
+        return 5 / 24;
       case GOOD:
-        return 3/24;
+        return 3 / 24;
       case SHIT:
-        return 2/24;
+        return 2 / 24;
       default:
         return 3.5;
     }
@@ -482,15 +482,15 @@ enum abstract ScoringRank(String)
     {
       case PERFECT_GOLD | PERFECT:
         // return 2.5;
-        return 95/24;
+        return 95 / 24;
       case EXCELLENT:
-        return 97/24;
+        return 97 / 24;
       case GREAT:
-        return 95/24;
+        return 95 / 24;
       case GOOD:
-        return 95/24;
+        return 95 / 24;
       case SHIT:
-        return 95/24;
+        return 95 / 24;
       default:
         return 3.5;
     }
@@ -502,15 +502,15 @@ enum abstract ScoringRank(String)
     {
       case PERFECT_GOLD | PERFECT:
         // return 2.5;
-        return 129/24;
+        return 129 / 24;
       case EXCELLENT:
-        return 122/24;
+        return 122 / 24;
       case GREAT:
-        return 109/24;
+        return 109 / 24;
       case GOOD:
-        return 107/24;
+        return 107 / 24;
       case SHIT:
-        return 186/24;
+        return 186 / 24;
       default:
         return 3.5;
     }
@@ -522,15 +522,15 @@ enum abstract ScoringRank(String)
     {
       case PERFECT_GOLD | PERFECT:
         // return 2.5;
-        return 140/24;
+        return 140 / 24;
       case EXCELLENT:
-        return 140/24;
+        return 140 / 24;
       case GREAT:
-        return 129/24;
+        return 129 / 24;
       case GOOD:
-        return 127/24;
+        return 127 / 24;
       case SHIT:
-        return 207/24;
+        return 207 / 24;
       default:
         return 3.5;
     }

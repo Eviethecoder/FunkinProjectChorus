@@ -83,7 +83,7 @@ class SongMetadata implements ICloneable<SongMetadata>
     this.playData.difficulties = [];
     this.playData.characters = new SongCharacterData('bf', 'gf', 'dad');
     this.playData.stage = 'mainStage';
-    this.playData.noteStyle = Constants.DEFAULT_NOTE_STYLE;
+
     this.generatedBy = SongRegistry.DEFAULT_GENERATEDBY;
     // Variation ID.
     this.variation = (variation == null) ? Constants.DEFAULT_VARIATION : variation;
@@ -435,11 +435,6 @@ class SongPlayData implements ICloneable<SongPlayData>
   public var stage:String;
 
   /**
-   * The note style used by this song.
-   */
-  public var noteStyle:String;
-
-  /**
    * The difficulty ratings for this song as displayed in Freeplay.
    * Key is a difficulty ID.
    */
@@ -485,7 +480,6 @@ class SongPlayData implements ICloneable<SongPlayData>
     result.difficulties = this.difficulties.clone();
     result.characters = this.characters.clone();
     result.stage = this.stage;
-    result.noteStyle = this.noteStyle;
     result.ratings = this.ratings.clone();
     result.album = this.album;
     result.previewStart = this.previewStart;

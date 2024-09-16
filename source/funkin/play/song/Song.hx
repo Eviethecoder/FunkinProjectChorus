@@ -300,7 +300,6 @@ class Song implements IPlayStateScriptedClass implements IRegistryEntry<SongMeta
         difficulty.album = metadata.playData.album;
 
         difficulty.stage = metadata.playData.stage;
-        difficulty.noteStyle = metadata.playData.noteStyle;
 
         difficulty.characters = metadata.playData.characters;
 
@@ -362,7 +361,6 @@ class Song implements IPlayStateScriptedClass implements IRegistryEntry<SongMeta
           difficulty.offsets = metadata?.offsets ?? new SongOffsets();
 
           difficulty.stage = metadata.playData.stage;
-          difficulty.noteStyle = metadata.playData.noteStyle;
 
           difficulty.characters = metadata.playData.characters;
         }
@@ -620,7 +618,6 @@ class SongDifficulty
   public var timeChanges:Array<SongTimeChange> = [];
 
   public var stage:String = Constants.DEFAULT_STAGE;
-  public var noteStyle:String = Constants.DEFAULT_NOTE_STYLE;
   public var characters:SongCharacterData = null;
 
   public var scrollSpeed:Float = Constants.DEFAULT_SCROLLSPEED;

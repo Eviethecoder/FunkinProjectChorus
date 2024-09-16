@@ -31,7 +31,6 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
   var inputSongArtist:TextField;
   var inputSongCharter:TextField;
   var inputStage:DropDown;
-  var inputNoteStyle:DropDown;
   var buttonCharacterPlayer:Button;
   var buttonCharacterGirlfriend:Button;
   var buttonCharacterOpponent:Button;
@@ -117,13 +116,6 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
     var startingValueStage = ChartEditorDropdowns.populateDropdownWithStages(inputStage, chartEditorState.currentSongMetadata.playData.stage);
     inputStage.value = startingValueStage;
 
-    inputNoteStyle.onChange = function(event:UIEvent) {
-      if (event.data?.id == null) return;
-      chartEditorState.currentSongNoteStyle = event.data.id;
-    };
-    var startingValueNoteStyle = ChartEditorDropdowns.populateDropdownWithNoteStyles(inputNoteStyle, chartEditorState.currentSongMetadata.playData.noteStyle);
-    inputNoteStyle.value = startingValueNoteStyle;
-
     inputBPM.onChange = function(event:UIEvent) {
       if (event.value == null || event.value <= 0) return;
 
@@ -197,7 +189,6 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
     inputSongArtist.value = chartEditorState.currentSongMetadata.artist;
     inputSongCharter.value = chartEditorState.currentSongMetadata.charter;
     inputStage.value = chartEditorState.currentSongMetadata.playData.stage;
-    inputNoteStyle.value = chartEditorState.currentSongMetadata.playData.noteStyle;
     inputBPM.value = chartEditorState.currentSongMetadata.timeChanges[0].bpm;
     inputDifficultyRating.value = chartEditorState.currentSongChartDifficultyRating;
     inputScrollSpeed.value = chartEditorState.currentSongChartScrollSpeed;

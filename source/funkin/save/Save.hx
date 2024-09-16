@@ -91,6 +91,10 @@ class Save
           naughtyness: true,
           downscroll: false,
           middlescroll: false,
+          noteHitSound: 'None',
+          timebar: 'classic',
+          noteHitSoundopp: 'None',
+          noteHitSoundVolume: 0,
           ghostapping: true,
           flashingLights: true,
           zoomCamera: true,
@@ -942,6 +946,7 @@ typedef SaveScoreData =
 
 typedef SaveScoreTallyData =
 {
+  var killer:Int;
   var sick:Int;
   var good:Int;
   var bad:Int;
@@ -964,6 +969,30 @@ typedef SaveDataOptions =
    * @default `true`
    */
   var naughtyness:Bool;
+
+  /**
+   * What hitsound plays, ddefault is none
+   * @default `None`
+   */
+  var noteHitSound:String;
+
+  /**
+   * The Timebar Type.
+   * @default `classic`
+   */
+  var timebar:String;
+
+  /**
+   * What hitsound plays, ddefault is none
+   * @default `None`
+   */
+  var noteHitSoundopp:String;
+
+  /**
+   * Whether notehitsounds play. default is false.
+   * @default `50`
+   */
+  var noteHitSoundVolume:Int;
 
   /**
    * If enabled, the strumline is at the bottom of the screen rather than the top.
