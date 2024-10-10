@@ -13,6 +13,7 @@ import funkin.play.notes.NoteSplash;
 import funkin.play.notes.NoteSprite;
 import funkin.play.notes.SustainTrail;
 import funkin.data.song.SongData.SongNoteData;
+import funkin.play.notes.notekind.NoteKindManager;
 import funkin.ui.options.PreferencesMenu;
 import funkin.util.SortUtil;
 import funkin.modding.events.ScriptEvent;
@@ -84,14 +85,17 @@ class Strumline extends FlxSpriteGroup
 
   public var onNoteIncoming:FlxTypedSignal<NoteSprite->Void>;
 
-  var strumlineNotes:FlxTypedSpriteGroup<StrumlineNote>;
-  var noteSplashes:FlxTypedSpriteGroup<NoteSplash>;
-  var noteHoldCovers:FlxTypedSpriteGroup<NoteHoldCover>;
+  public var strumlineNotes:FlxTypedSpriteGroup<StrumlineNote>;
+  public var noteSplashes:FlxTypedSpriteGroup<NoteSplash>;
+  public var noteHoldCovers:FlxTypedSpriteGroup<NoteHoldCover>;
+  public var resultid1:Int = 0;
+  public var resultid2:Int = 0;
+  public var resultid3:Int = 0;
 
   var notesVwoosh:FlxTypedSpriteGroup<NoteSprite>;
   var holdNotesVwoosh:FlxTypedSpriteGroup<SustainTrail>;
 
-  final noteStyle:NoteStyle;
+  var noteStyle:NoteStyle;
 
   /**
    * The note data for the song. Should NOT be altered after the song starts,
@@ -150,6 +154,7 @@ class Strumline extends FlxSpriteGroup
       child.x = getXPos(DIRECTIONS[i]);
       child.x += INITIAL_OFFSET;
       child.y = 0;
+      child.ID = i;
       noteStyle.applyStrumlineOffsets(child);
       this.strumlineNotes.add(child);
     }
@@ -308,7 +313,7 @@ class Strumline extends FlxSpriteGroup
     var vwoosh:Float = 1.0;
 
     return
-      Constants.PIXELS_PER_MS * (conductorInUse.songPosition - strumTime - Conductor.instance.inputOffset) * scrollSpeed * vwoosh * (Preferences.downscroll ? 1 : -1);
+      Constants.PIXELS_PER_MS * (conductorInUse.frameSongPosition - strumTime - Conductor.instance.inputOffset) * scrollSpeed * vwoosh * (Preferences.downscroll ? 1 : -1);
   }
 
   function updateNotes():Void
@@ -342,6 +347,7 @@ class Strumline extends FlxSpriteGroup
       if (note.length > 0)
       {
         noteSprite.holdNoteSprite = buildHoldNoteSprite(note);
+        noteSprite.holdNoteSprite.x = strumlineNotes.members[noteSprite.holdNoteSprite.noteDirection].x;
       }
 
       nextNoteIndex = noteIndex + 1; // Increment the nextNoteIndex rather than splicing the array, because splicing is slow.
@@ -355,8 +361,9 @@ class Strumline extends FlxSpriteGroup
       if (note == null || !note.alive) continue;
 
       var vwoosh:Bool = note.holdNoteSprite == null;
-      // Set the note's position.
+      // Set the note's position. modcharting requires constant updating like the y axis. your stupid kuru for taking a day for this - past kuru
       note.y = this.y - INITIAL_OFFSET + calculateNoteYPos(note.strumTime, vwoosh);
+      note.x = strumlineNotes.members[note.direction].x;
 
       // If the note is miss
       var isOffscreen = Preferences.downscroll ? note.y > FlxG.height : note.y < -note.height;
@@ -369,6 +376,7 @@ class Strumline extends FlxSpriteGroup
     // Update rendering of hold notes.
     for (holdNote in holdNotes.members)
     {
+      holdNote.x = strumlineNotes.members[holdNote.noteDirection].x + 40;
       if (holdNote == null || !holdNote.alive) continue;
 
       if (conductorInUse.songPosition > holdNote.strumTime && holdNote.hitNote && !holdNote.missedNote)
@@ -434,6 +442,8 @@ class Strumline extends FlxSpriteGroup
         {
           holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) + yOffset + STRUMLINE_SIZE / 2;
         }
+
+        holdNote.x = strumlineNotes.members[holdNote.noteDirection].x + 40;
 
         // Clean up the cover.
         if (holdNote.cover != null)
@@ -658,17 +668,29 @@ class Strumline extends FlxSpriteGroup
     // TODO: Add a setting to disable note splashes.
     // if (Settings.noSplash) return;
     if (!noteStyle.isNoteSplashEnabled()) return;
+    var id:Int;
 
     var splash:NoteSplash = this.constructNoteSplash();
+
+    switch (direction)
+    {
+      case NoteDirection.LEFT:
+        id = 0;
+      case NoteDirection.DOWN:
+        id = 1;
+      case NoteDirection.UP:
+        id = 2;
+      case NoteDirection.RIGHT:
+        id = 3;
+    }
 
     if (splash != null)
     {
       splash.play(direction);
 
-      splash.x = this.x;
-      splash.x += getXPos(direction);
+      splash.x = strumlineNotes.members[id].x;
       splash.x += INITIAL_OFFSET;
-      splash.y = this.y;
+      splash.y = strumlineNotes.members[id].y;
       splash.y -= INITIAL_OFFSET;
       splash.y += 0;
     }
@@ -679,6 +701,18 @@ class Strumline extends FlxSpriteGroup
     // TODO: Add a setting to disable note splashes.
     // if (Settings.noSplash) return;
     if (!noteStyle.isHoldNoteCoverEnabled()) return;
+    var id:Int;
+    switch (holdNote.noteDirection)
+    {
+      case NoteDirection.LEFT:
+        id = 0;
+      case NoteDirection.DOWN:
+        id = 1;
+      case NoteDirection.UP:
+        id = 2;
+      case NoteDirection.RIGHT:
+        id = 3;
+    }
 
     var cover:NoteHoldCover = this.constructNoteHoldCover();
 
@@ -690,31 +724,35 @@ class Strumline extends FlxSpriteGroup
 
       cover.playStart();
 
-      cover.x = this.x;
-      cover.x += getXPos(holdNote.noteDirection);
-      cover.x += STRUMLINE_SIZE / 2;
+      cover.x = strumlineNotes.members[id].x;
+      // cover.x += getXPos(holdNote.noteDirection);
+      // cover.x += STRUMLINE_SIZE / 2;
       cover.x -= cover.width / 2;
-      cover.x += -12; // Manual tweaking because fuck.
+      cover.x -= INITIAL_OFFSET;
+      cover.x -= -32; // Manual tweaking because fuck.
 
-      cover.y = this.y;
+      cover.y = strumlineNotes.members[id].y;
       cover.y += INITIAL_OFFSET;
       cover.y += STRUMLINE_SIZE / 2;
-      cover.y += -96; // Manual tweaking because fuck.
+      cover.y += -106; // Manual tweaking because fuck.
     }
   }
 
   public function buildNoteSprite(note:SongNoteData):NoteSprite
   {
     var noteSprite:NoteSprite = constructNoteSprite();
-
+    var offsets:Array<Float> = noteStyle.getNoteOffsets();
     if (noteSprite != null)
     {
+      var noteKindStyle:NoteStyle = NoteKindManager.getNoteStyle(note.kind, this.noteStyle.id) ?? this.noteStyle;
+      noteSprite.setupNoteGraphic(noteKindStyle);
+
       noteSprite.direction = note.getDirection();
       noteSprite.noteData = note;
 
-      noteSprite.x = this.x;
-      noteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      noteSprite.x = strumlineNotes.members[noteSprite.direction].x;
       noteSprite.x -= NUDGE;
+      noteSprite.x += offsets[0];
       // noteSprite.x += INITIAL_OFFSET;
       noteSprite.y = -9999;
     }
@@ -739,8 +777,8 @@ class Strumline extends FlxSpriteGroup
       holdNoteSprite.visible = true;
       holdNoteSprite.alpha = 0.6;
 
-      holdNoteSprite.x = this.x;
-      holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
+      holdNoteSprite.x = strumlineNotes.members[holdNoteSprite.noteDirection].x;
+      // holdNoteSprite.x += getXPos(DIRECTIONS[note.getDirection() % KEY_COUNT]);
       holdNoteSprite.x += STRUMLINE_SIZE / 2;
       holdNoteSprite.x -= holdNoteSprite.width / 2;
       holdNoteSprite.y = -9999;
@@ -762,6 +800,8 @@ class Strumline extends FlxSpriteGroup
     {
       // Create a new note splash.
       result = new NoteSplash(noteStyle);
+      result.ID = resultid1;
+      resultid1++;
       this.noteSplashes.add(result);
     }
     else
@@ -796,6 +836,8 @@ class Strumline extends FlxSpriteGroup
     {
       // Create a new note hold cover.
       result = new NoteHoldCover(noteStyle);
+      result.ID = resultid2;
+      resultid2++;
       this.noteHoldCovers.add(result);
     }
     else
@@ -838,6 +880,8 @@ class Strumline extends FlxSpriteGroup
       // The note sprite pool is full and all note splashes are active.
       // We have to create a new note.
       result = new NoteSprite(noteStyle);
+      result.ID = resultid3;
+      resultid3++;
       this.notes.add(result);
     }
 

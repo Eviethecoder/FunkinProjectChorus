@@ -4,8 +4,11 @@ import flixel.util.FlxSignal.FlxTypedSignal;
 import flxanimate.FlxAnimate;
 import flxanimate.FlxAnimate.Settings;
 import flxanimate.frames.FlxAnimateFrames;
+import flixel.graphics.frames.FlxFrame;
+import flixel.system.FlxAssets.FlxGraphicAsset;
 import openfl.display.BitmapData;
-import openfl.utils.Assets;
+import flixel.math.FlxPoint;
+import flxanimate.animate.FlxKeyFrame;
 
 /**
  * A sprite which provides convenience functions for rendering a texture atlas with animations.
@@ -24,14 +27,14 @@ class FlxAtlasSprite extends FlxAnimate
       // Offset: new FlxPoint(0, 0), // This is just FlxSprite.offset
     };
 
-  /**
-   * Signal dispatched when an animation finishes playing.
-   */
-  public var onAnimationFinish:FlxTypedSignal<String->Void> = new FlxTypedSignal<String->Void>();
-
   var currentAnimation:String;
 
   var canPlayOtherAnims:Bool = true;
+
+  /**
+   * Signal dispatched when a non-looping animation finishes playing.
+   */
+  public var onAnimationComplete:FlxTypedSignal<String->Void> = new FlxTypedSignal();
 
   public function new(x:Float, y:Float, ?path:String, ?settings:Settings)
   {
@@ -49,7 +52,7 @@ class FlxAtlasSprite extends FlxAnimate
       throw 'FlxAtlasSprite not initialized properly. Are you sure the path (${path}) exists?';
     }
 
-    onAnimationFinish.add(cleanupAnimation);
+    onAnimationComplete.add(cleanupAnimation);
 
     // This defaults the sprite to play the first animation in the atlas,
     // then pauses it. This ensures symbols are intialized properly.
@@ -151,7 +154,7 @@ class FlxAtlasSprite extends FlxAnimate
         }
         else
         {
-          onAnimationFinish.dispatch(id);
+          onAnimationComplete.dispatch(id);
         }
       }
     };
@@ -195,6 +198,47 @@ class FlxAtlasSprite extends FlxAnimate
   function getNextFrameLabel(label:String):String
   {
     return listAnimations()[(getLabelIndex(label) + 1) % listAnimations().length];
+  }
+
+  function _onAnimationComplete():Void
+  {
+    if (currentAnimation != null)
+    {
+      onAnimationComplete.dispatch(currentAnimation);
+    }
+    else
+    {
+      onAnimationComplete.dispatch('');
+    }
+  }
+
+  var prevFrames:Map<Int, FlxFrame> = [];
+
+  public function replaceFrameGraphic(index:Int, ?graphic:FlxGraphicAsset):Void
+  {
+    if (graphic == null || !Assets.exists(graphic))
+    {
+      var prevFrame:Null<FlxFrame> = prevFrames.get(index);
+      if (prevFrame == null) return;
+
+      prevFrame.copyTo(frames.getByIndex(index));
+      return;
+    }
+
+    var prevFrame:FlxFrame = prevFrames.get(index) ?? frames.getByIndex(index).copyTo();
+    prevFrames.set(index, prevFrame);
+
+    var frame = FlxG.bitmap.add(graphic).imageFrame.frame;
+    frame.copyTo(frames.getByIndex(index));
+
+    // Additional sizing fix.
+    @:privateAccess
+    if (true)
+    {
+      var frame = frames.getByIndex(index);
+      frame.tileMatrix[0] = prevFrame.frame.width / frame.frame.width;
+      frame.tileMatrix[3] = prevFrame.frame.height / frame.frame.height;
+    }
   }
 
   function getLabelIndex(label:String):Int

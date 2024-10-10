@@ -77,10 +77,15 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
     return _data.fallback;
   }
 
+  /**
+   * Creates frames and animations
+   * @param noteStyle The `NoteStyle` instance
+   */
   public function buildNoteSprite(target:NoteSprite):Void
   {
     // Apply the note sprite frames.
-    var atlas:FlxAtlasFrames = buildNoteFrames(false);
+    var atlas:Null<FlxAtlasFrames> = buildNoteFrames(false);
+
     if (atlas == null)
     {
       throw 'Could not load spritesheet for note style: $id';
@@ -88,10 +93,15 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
 
     target.frames = atlas;
 
-    target.antialiasing = !_data.assets.note.isPixel;
+    target.antialiasing = !(_data.assets?.note?.isPixel ?? false);
 
     // Apply the animations.
     buildNoteAnimations(target);
+
+    // Set the scale.
+    var scale = getNoteScale();
+    target.scale.set(scale, scale);
+    target.updateHitbox();
   }
 
   var noteFrames:FlxAtlasFrames = null;
@@ -420,6 +430,12 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
     var data = _data?.assets?.noteSplash;
     if (data == null) return fallback.getNoteSplashOffsets();
     return data.offsets;
+  }
+
+  public function isNoteAnimated():Bool
+  {
+    // LOL is double ?? bad practice?
+    return _data.assets?.note?.animated ?? fallback?.isNoteAnimated() ?? false;
   }
 
   public function isNoteSplashEnabled():Bool

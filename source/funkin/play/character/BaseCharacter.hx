@@ -586,6 +586,7 @@ class BaseCharacter extends Bopper
       // If the note is from the same strumline, play the sing animation.
       if (event.note.noteData.kind == 'Alt')
       { // if more built in notes are added. make a switch
+        trace('test');
         this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
       }
       else
@@ -598,6 +599,18 @@ class BaseCharacter extends Bopper
     else if (!event.note.noteData.getMustHitNote() && characterType == DAD && event.note.noteData.kind != 'noanim')
     {
       if (event.note.noteData.kind == 'Alt')
+      { // if more built in notes are added. make a switch
+        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
+      }
+      else
+      {
+        this.playSingAnimation(event.note.noteData.getDirection(), false);
+      }
+      holdTimer = 0;
+    }
+    else if (characterType == GF && event.note.noteData.kind != 'noanim' && event.note.noteData.kind == 'gf')
+    {
+      if (event.note.noteData.kind == 'GF-Alt')
       { // if more built in notes are added. make a switch
         this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
       }

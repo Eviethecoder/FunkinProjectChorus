@@ -66,6 +66,22 @@ class NoteSprite extends FunkinSprite
   }
 
   /**
+   * Custom parameters for this note
+   */
+  public var params(get, set):Dynamic;
+
+  function get_params():Dynamic
+  {
+    return this.noteData?.params ?? [];
+  }
+
+  function set_params(value:Dynamic):Dynamic
+  {
+    if (this.noteData == null) return value;
+    return this.noteData.params = value;
+  }
+
+  /**
    * The data of the note (i.e. the direction.)
    */
   public var direction(default, set):NoteDirection;
@@ -138,21 +154,25 @@ class NoteSprite extends FunkinSprite
   public function new(noteStyle:NoteStyle, direction:Int = 0)
   {
     super(0, -9999);
+    this.direction = direction;
     this.hsvShader = new HSVShader();
 
     setupNoteGraphic(noteStyle);
-    this.direction = direction;
   }
 
-  function setupNoteGraphic(noteStyle:NoteStyle):Void
+  /**
+   * Creates frames and animations
+   * @param noteStyle The `NoteStyle` instance
+   */
+  public function setupNoteGraphic(noteStyle:NoteStyle):Void
   {
     noteStyle.buildNoteSprite(this);
 
-    setGraphicSize(Strumline.STRUMLINE_SIZE * noteStyle.getNoteScale());
-    updateHitbox();
-
-    this.offsets = noteStyle.getNoteOffsets();
     this.shader = hsvShader;
+
+    // `false` disables the update() function for performance.
+    this.offsets = noteStyle.getNoteOffsets();
+    this.active = noteStyle.isNoteAnimated();
   }
 
   override function getScreenPosition(?result:flixel.math.FlxPoint, ?camera:flixel.FlxCamera):flixel.math.FlxPoint
@@ -161,6 +181,16 @@ class NoteSprite extends FunkinSprite
     output.x += offsets[0];
     output.y += offsets[1];
     return output;
+  }
+
+  /**
+   * Retrieve the value of the param with the given name
+   * @param name Name of the param
+   * @return Null<Dynamic>
+   */
+  public function getParam(name:String):Null<Dynamic>
+  {
+    return this.noteData?.getDynamic(name);
   }
 
   #if FLX_DEBUG
@@ -201,6 +231,7 @@ class NoteSprite extends FunkinSprite
     super.revive();
     this.visible = true;
     this.alpha = 1.0;
+    this.active = false;
     this.tooEarly = false;
     this.hasBeenHit = false;
     this.mayHit = false;

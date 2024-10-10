@@ -263,7 +263,7 @@ class ResultState extends MusicBeatSubState
         bfShit.visible = false;
         bfShit.zIndex = 500;
         add(bfShit);
-        bfShit.onAnimationFinish.add((animName) -> {
+        bfShit.onAnimationComplete.add((animName) -> {
           if (bfShit != null)
           {
             bfShit.playAnimation('Loop Start');
@@ -378,7 +378,8 @@ class ResultState extends MusicBeatSubState
     var extraYOffset:Float = 7;
 
     hStuf += 2;
-    var tallykiller:TallyCounter = new TallyCounter(330, (hStuf * 5) + extraYOffset, params.scoreData.tallies.killer, 0xFFE59289);
+    var tallykiller:TallyCounter = new TallyCounter(330, (hStuf * 4) + extraYOffset, params.scoreData.tallies.killer, 0xFFE59289);
+
     ratingGrp.add(tallykiller);
 
     var tallySick:TallyCounter = new TallyCounter(230, (hStuf * 5) + extraYOffset, params.scoreData.tallies.sick, 0xFF89E59E);

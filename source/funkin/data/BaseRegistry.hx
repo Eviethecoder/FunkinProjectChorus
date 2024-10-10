@@ -199,7 +199,7 @@ abstract class BaseRegistry<T:(IRegistryEntry<J> & Constructible<EntryConstructo
    * @param id The ID of the entry.
    * @return The entry's version, or `null` if it does not exist or is invalid.
    */
-  public function fetchEntryVersion(id:String):Null<thx.semver.Version>
+  public function fetchEntryVersion(id:Null<String>):Null<thx.semver.Version>
   {
     var entryStr:String = loadEntryFile(id).contents;
     var entryVersion:thx.semver.Version = VersionUtil.getVersionFromJSON(entryStr);
@@ -263,7 +263,7 @@ abstract class BaseRegistry<T:(IRegistryEntry<J> & Constructible<EntryConstructo
    * @param version The entry's version (use `fetchEntryVersion(id)`).
    * @return The created entry.
    */
-  public function parseEntryDataWithMigration(id:String, version:thx.semver.Version):Null<J>
+  public function parseEntryDataWithMigration(id:Null<String>, version:Null<thx.semver.Version>):Null<J>
   {
     if (version == null)
     {

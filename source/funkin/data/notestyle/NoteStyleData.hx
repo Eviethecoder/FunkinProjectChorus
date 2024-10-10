@@ -103,6 +103,14 @@ typedef NoteStyleAssetData<T> =
   var offsets:Null<Array<Float>>;
 
   /**
+   * If true, animations will be played on the graphic.
+   * @default `false` to save performance.
+   */
+  @:default(false)
+  @:optional
+  var animated:Bool;
+
+  /**
    * If true, the prop is a pixel sprite, and will be rendered without anti-aliasing.
    */
   @:default(false)

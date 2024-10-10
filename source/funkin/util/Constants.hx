@@ -188,10 +188,15 @@ class Constants
   public static final DEFAULT_DIFFICULTY_LIST:Array<String> = ['easy', 'normal', 'hard'];
 
   /**
+   * Default list of difficulties for Erect mode.
+   */
+  public static final DEFAULT_DIFFICULTY_LIST_ERECT:Array<String> = ['erect', 'nightmare'];
+
+  /**
    * List of all difficulties used by the base game.
    * Includes Erect and Nightmare.
    */
-  public static final DEFAULT_DIFFICULTY_LIST_FULL:Array<String> = ['easy', 'normal', 'hard', 'erect', 'nightmare'];
+  public static final DEFAULT_DIFFICULTY_LIST_FULL:Array<String> = ['easy', 'normal', 'hard', 'erect', 'nightmare', 'C-mix'];
 
   /**
    * Default player character for charts.
@@ -221,7 +226,7 @@ class Constants
   /**
    * Standardized variations for charts
    */
-  public static final DEFAULT_VARIATION_LIST:Array<String> = ['default', 'erect', 'pico'];
+  public static final DEFAULT_VARIATION_LIST:Array<String> = ['default', 'erect', 'pico', 'climax'];
 
   /**
    * The default intensity multiplier for camera bops.
@@ -258,6 +263,11 @@ class Constants
    * The default note style for songs.
    */
   public static final DEFAULT_NOTE_STYLE:String = 'funkin';
+
+  /**
+   * The default HUD style for songs.
+   */
+  public static final DEFAULT_HUD_STYLE:String = 'funkin';
 
   /**
    * The default album for songs in Freeplay.

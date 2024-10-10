@@ -133,8 +133,8 @@ class AnimateAtlasCharacter extends BaseCharacter
 
     var sprite:FlxAtlasSprite = new FlxAtlasSprite(0, 0, Paths.animateAtlas(_data.assetPath, 'shared'));
 
-    sprite.onAnimationFinish.removeAll();
-    sprite.onAnimationFinish.add(this.onAnimationFinished);
+    sprite.onAnimationComplete.removeAll();
+    sprite.onAnimationComplete.add(this.onAnimationFinished);
 
     return sprite;
   }
@@ -145,14 +145,13 @@ class AnimateAtlasCharacter extends BaseCharacter
 
     if (getAnimationData() != null && getAnimationData().looped)
     {
-      playAnimation(prefix, true, false);
+      playAnimation(currentAnimName, true, false);
     }
     else
     {
       // Make the game hold on the last frame.
       this.mainSprite.cleanupAnimation(prefix);
       // currentAnimName = null;
-      animFinished = true;
 
       // Fallback to idle!
       // playAnimation('idle', true, false);

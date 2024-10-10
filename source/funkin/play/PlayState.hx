@@ -12,9 +12,11 @@ import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 import flixel.text.FlxText;
+import funkin.play.notes.notekind.NoteKindManager;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.ui.FlxBar;
+import funkin.play.notes.StrumlineNote;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import funkin.api.newgrounds.NGio;
@@ -24,6 +26,9 @@ import funkin.data.dialogue.conversation.ConversationRegistry;
 import funkin.data.event.SongEventRegistry;
 import funkin.data.notestyle.NoteStyleData;
 import funkin.data.notestyle.NoteStyleRegistry;
+import funkin.data.hudstyle.HudStyleData;
+import funkin.data.hudstyle.HudStyleRegistry;
+import funkin.play.hudstyle.HudStyle;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongData.SongNoteData;
@@ -58,6 +63,7 @@ import funkin.ui.debug.stage.StageOffsetSubState;
 import funkin.ui.mainmenu.MainMenuState;
 import funkin.ui.MusicBeatSubState;
 import funkin.ui.options.PreferencesMenu;
+import funkin.play.BarStuff;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.transition.LoadingState;
 import funkin.util.SerializerUtil;
@@ -180,6 +186,23 @@ class PlayState extends MusicBeatSubState
   static var lastParams:PlayStateParams = null;
 
   /**
+   * the lyrics text.
+   */
+  public var lyrics:FlxText = new FlxText();
+
+  /**
+   * the lyrics text timer
+   */
+  public var lyrictime:FlxTimer = new FlxTimer();
+
+  /**
+   * the lyrics text formats
+   */
+  public var boldformat:FlxTextFormat = new FlxTextFormat(FlxColor.RED, true);
+
+  public var boldyellowformat:FlxTextFormat = new FlxTextFormat(FlxColor.YELLOW, true);
+
+  /**
    * PUBLIC INSTANCE VARIABLES
    * Public instance variables should be used for information that must be reset or dereferenced
    * every time the state is changed, but may need to be accessed externally.
@@ -217,7 +240,7 @@ class PlayState extends MusicBeatSubState
   /**
    * the songs curent percent
    */
-  var songPercent:Float = 0;
+  public var songPercent:Float = 0;
 
   /**
    * The currently selected variation.
@@ -228,6 +251,11 @@ class PlayState extends MusicBeatSubState
    * The currently active Stage. This is the object containing all the props.
    */
   public var currentStage:Stage = null;
+
+  /**
+   * The healthbar. handled by barstuff class
+   */
+  public var bars:BarStuff;
 
   /**
    * Gets set to true when the PlayState needs to reset (player opted to restart or died).
@@ -299,6 +327,11 @@ class PlayState extends MusicBeatSubState
    * An FlxTween that changes the additive speed to the desired amount.
    */
   public var scrollSpeedTweens:Array<FlxTween> = [];
+
+  /**
+   * An FlxTween variable to be able to cancel it .
+   */
+  public var noteTweens:FlxTween;
 
   /**
    * The camera follow point from the last stage.
@@ -452,7 +485,7 @@ class PlayState extends MusicBeatSubState
    * The displayed value of the player's health.
    * Used to provide smooth animations based on linear interpolation of the player's health.
    */
-  var healthLerp:Float = Constants.HEALTH_STARTING;
+  public var healthLerp:Float = Constants.HEALTH_STARTING;
 
   /**
    * The displayed value of the song time.
@@ -525,34 +558,6 @@ class PlayState extends MusicBeatSubState
    * The FlxText which displays the current score.
    */
   var missText:FlxText;
-
-  /**
-   * The FlxText which displays the current time.
-   */
-  public var timeTxt:FlxText;
-
-  /**
-   * The bar which displays the player's health.
-   * Dynamically updated based on the value of `healthLerp` (which is based on `health`).
-   */
-  public var healthBar:FlxBar;
-
-  /**
-   * The background image used for the health bar.
-   * Emma says the image is slightly skewed so I'm leaving it as an image instead of a `createGraphic`.
-   */
-  public var healthBarBG:FunkinSprite;
-
-  /**
-   * The bar which displays the time.
-   */
-  public var timeBar:FlxBar;
-
-  /**
-   * The background image used for the time bar.
-   * Emma says the image is slightly skewed so I'm leaving it as an image instead of a `createGraphic`.
-   */
-  public var timeBarBG:FunkinSprite;
 
   /**
    * The health icon representing the player.
@@ -810,19 +815,7 @@ class PlayState extends MusicBeatSubState
     }
 
     // Initialize the judgements and combo meter.
-    comboPopUps = new PopUpStuff();
-    comboPopUps.zIndex = 900;
-    add(comboPopUps);
-    comboPopUps.cameras = [camHUD];
-
-    mstimertxt = new FlxText((FlxG.width * 0.474 + comboPopUps.offsets[0]) + 50, (FlxG.camera.height * 0.45 - 60 + comboPopUps.offsets[1]) + 40, 0, "69ms");
-    mstimertxt.setFormat(Paths.font("pixel.otf"), 18, -1, "CENTER", FlxTextBorderStyle.OUTLINE_FAST);
-    mstimertxt.borderColor = FlxColor.BLACK;
-    mstimertxt.borderSize = 2.0;
-    mstimertxt.zIndex = 801;
-    mstimertxt.alpha = 0.001;
-    mstimertxt.cameras = [camHUD];
-    add(mstimertxt);
+    initPopups();
 
     // Initialize Discord Rich Presence.
     initDiscord();
@@ -874,6 +867,28 @@ class PlayState extends MusicBeatSubState
     // This step ensures z-indexes are applied properly,
     // and it's important to call it last so all elements get affected.
     refresh();
+  }
+
+  function initPopups():Void
+  {
+    var hudStyleId:String = currentChart.hudStyle;
+    var hudStyle:HudStyle = new HudStyle(hudStyleId);
+    trace(hudStyle);
+    if (hudStyle == null) hudStyle = HudStyleRegistry.instance.fetchDefault();
+    // Initialize the judgements and combo meter.
+    comboPopUps = new PopUpStuff(hudStyle);
+    comboPopUps.zIndex = 900;
+    add(comboPopUps);
+    comboPopUps.cameras = [camHUD];
+
+    mstimertxt = new FlxText((FlxG.width * 0.474 + comboPopUps.offsets[0]) + 50, (FlxG.camera.height * 0.45 - 60 + comboPopUps.offsets[1]) + 40, 0, "69ms");
+    mstimertxt.setFormat(Paths.font("pixel.otf"), 18, -1, "CENTER", FlxTextBorderStyle.OUTLINE_FAST);
+    mstimertxt.borderColor = FlxColor.BLACK;
+    mstimertxt.borderSize = 2.0;
+    mstimertxt.zIndex = 801;
+    mstimertxt.alpha = 0.001;
+    mstimertxt.cameras = [camHUD];
+    add(mstimertxt);
   }
 
   public override function draw():Void
@@ -1022,7 +1037,7 @@ class PlayState extends MusicBeatSubState
       health = Constants.HEALTH_STARTING;
       songScore = 0;
       Highscore.tallies.combo = 0;
-      Countdown.performCountdown(currentStageId.startsWith('school'));
+      Countdown.performCountdown();
 
       needsReset = false;
     }
@@ -1228,7 +1243,8 @@ class PlayState extends MusicBeatSubState
     health = Constants.HEALTH_STARTING;
     healthLerp = health;
 
-    healthBar.value = healthLerp;
+    bars.shouldupdate = false;
+    bars.healthBar.value = healthLerp;
 
     iconP1.updatePosition();
     iconP2.updatePosition();
@@ -1284,6 +1300,9 @@ class PlayState extends MusicBeatSubState
 
     // super.dispatchEvent(event) dispatches event to module scripts.
     super.dispatchEvent(event);
+
+    // Dispatch event to note kind scripts
+    NoteKindManager.callEvent(event);
 
     // Dispatch event to stage script.
     ScriptEventDispatcher.callEvent(currentStage, event);
@@ -1682,85 +1701,40 @@ class PlayState extends MusicBeatSubState
      */
   function initHealthBar():Void
   {
+    var hudStyleId:String = currentChart.hudStyle;
+    var hudStyle:HudStyle = new HudStyle(hudStyleId);
+
     var emptyarray:Array<FlxColor> = [FlxColor.BLACK, FlxColor.BLACK];
     var fullyarray:Array<FlxColor> = [
       FlxColor.fromRGB(dad.healthcolor[0], dad.healthcolor[1], dad.healthcolor[2]),
       FlxColor.fromRGB(boyfriend.healthcolor[0], boyfriend.healthcolor[1], boyfriend.healthcolor[2])
     ];
-    var healthBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
-    healthBarBG = FunkinSprite.create(0, healthBarYPos, 'healthBar');
-    healthBarBG.screenCenter(X);
-    healthBarBG.scrollFactor.set(0, 0);
-    healthBarBG.zIndex = 800;
-    add(healthBarBG);
+    bars = new BarStuff(hudStyle);
+    bars.barcreation(dad.healthcolor, boyfriend.healthcolor);
+    add(bars);
 
-    healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), this,
-      'healthLerp', 0, 2);
-    healthBar.scrollFactor.set();
-    healthBar.createFilledBar(FlxColor.fromRGB(dad.healthcolor[0], dad.healthcolor[1], dad.healthcolor[2]),
-      FlxColor.fromRGB(boyfriend.healthcolor[0], boyfriend.healthcolor[1], boyfriend.healthcolor[2]));
-    healthBar.zIndex = 801;
-    add(healthBar);
+    setuplyrics();
 
-    if (Preferences.timebar != 'None')
-    {
-      var timeBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.97 : FlxG.height;
-      timeBarBG = FunkinSprite.create(0, timeBarYPos, 'Timebar');
-      timeBarBG.screenCenter(X);
-      timeBarBG.scrollFactor.set(0, 0);
-      timeBarBG.zIndex = 800;
-      add(timeBarBG);
-
-      timeBar = new FlxBar(timeBarBG.x + 4, timeBarBG.y + 4, LEFT_TO_RIGHT, Std.int(timeBarBG.width - 8), Std.int(timeBarBG.height - 8), this, 'songPercent',
-        0, 1);
-      timeBar.scrollFactor.set();
-
-      switch (Preferences.timebar)
-      {
-        case 'Classic':
-          timeBar.createFilledBar(FlxColor.BLACK, FlxColor.WHITE);
-        case "Gradient":
-          timeBar.createGradientBar(emptyarray, fullyarray);
-      }
-      timeBar.zIndex = 802;
-      add(timeBar);
-
-      // The time text.
-      timeTxt = new FlxText(timeBar.x + (FlxG.width / 2) - 248, 19, 400, "", 32);
-      timeTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-      timeTxt.scrollFactor.set();
-      timeTxt.alpha = 1;
-      timeTxt.y = timeBar.y - 10.30;
-      timeTxt.screenCenter(X);
-      timeTxt.borderSize = 2;
-      timeTxt.text = 'unset';
-      timeTxt.zIndex = 810;
-      add(timeTxt);
-
-      timeTxt.cameras = [camHUD];
-      timeBar.cameras = [camHUD];
-    }
     // The score text below the health bar.
-    scoreText = new FlxText(-300, healthBarBG.y + 30, 0, '', 20);
+    scoreText = new FlxText(-300, bars.healthBarBG.y + 30, 0, '', 20);
     scoreText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
     scoreText.scrollFactor.set();
     scoreText.zIndex = 802;
     scoreText.screenCenter(X);
     scoreText.x = scoreText.x - 150;
     add(scoreText);
-    missText = new FlxText(healthBarBG.x + healthBarBG.width - 490, healthBarBG.y + 30, 0, '', 20);
-    missText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-    missText.scrollFactor.set();
-    missText.zIndex = 802;
     add(missText);
-
     // Move the health bar to the HUD camera.
-
-    timeBarBG.cameras = [camHUD];
-    healthBar.cameras = [camHUD];
-    healthBarBG.cameras = [camHUD];
+    lyrics.cameras = [camHUD];
+    bars.cameras = [camHUD];
     scoreText.cameras = [camHUD];
-    missText.cameras = [camHUD];
+  }
+
+  function setuplyrics()
+  {
+    lyrics = new FlxText(0, 0, FlxG.width, '', 30);
+    lyrics.setFormat(Paths.font("vcr.ttf"), 30, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    add(lyrics);
   }
 
   /**
@@ -1826,6 +1800,24 @@ class PlayState extends MusicBeatSubState
 
     // Reset bop multiplier.
     cameraBopMultiplier = 1.0;
+  }
+
+  public function makelyrics(lyric:String, length:Float, theease:String)
+  { // modified from sonic rodentrap. go play it
+    var bold = new FlxTextFormatMarkerPair(boldformat, "@");
+    var boldyellow = new FlxTextFormatMarkerPair(boldyellowformat, "$");
+    lyrics.alpha = 1;
+    lyrics.applyMarkup(lyric, [bold, boldyellow]);
+    lyrics.y = FlxG.height - lyrics.height - 150;
+
+    lyrictime.cancel();
+
+    lyrictime = new FlxTimer().start(length, Void -> {
+      FlxTween.tween(lyrics, {alpha: 0}, 1,
+        {
+          ease: getFlxEaseByString(theease)
+        });
+    });
   }
 
   /**
@@ -1965,14 +1957,14 @@ class PlayState extends MusicBeatSubState
   function initicons():Void
   {
     iconP1 = new HealthIcon('bf', 0);
-    iconP1.y = healthBar.y - (iconP1.height / 2);
+    iconP1.y = bars.healthBar.y - (iconP1.height / 2);
     boyfriend.initHealthIcon(false); // Apply the character ID here
     iconP1.zIndex = 850;
     add(iconP1);
     iconP1.cameras = [camHUD];
 
     iconP2 = new HealthIcon('dad', 1);
-    iconP2.y = healthBar.y - (iconP2.height / 2);
+    iconP2.y = bars.healthBar.y - (iconP2.height / 2);
     dad.initHealthIcon(true); // Apply the character ID here
     iconP2.zIndex = 850;
     add(iconP2);
@@ -2031,7 +2023,7 @@ class PlayState extends MusicBeatSubState
     }
   }
 
-  public function regenStrumlines(side:String, noteskin:String)
+  public function regenStrumlines(side:String, noteskin:String) // todo: move to its event
   {
     var notestyletochange:NoteStyle = NoteStyleRegistry.instance.fetchEntry(noteskin);
 
@@ -2206,7 +2198,7 @@ class PlayState extends MusicBeatSubState
   public function startCountdown():Void
   {
     // If Countdown.performCountdown returns false, then the countdown was canceled by a script.
-    var result:Bool = Countdown.performCountdown(currentStageId.startsWith('school'));
+    var result:Bool = Countdown.performCountdown();
     if (!result) return;
 
     isInCutscene = false;
@@ -2367,14 +2359,7 @@ class PlayState extends MusicBeatSubState
     }
     else
     {
-      scoreText.text = 'Score:'
-        + songScore
-        + ' | Misses: '
-        + misscount
-        + " | Accuracy: "
-        + Math.floor(acc * 100) / 100
-        + "% | "
-        + getRating(acc);
+      scoreText.text = 'Score:' + songScore + ' | Misses: ' + misscount + " |" + getRating(acc);
     }
   }
 
@@ -2404,7 +2389,7 @@ class PlayState extends MusicBeatSubState
     var songCalc:Float = (songLength - curtime);
     var secondsTotal:Int = Math.floor(songCalc / 1000);
     // timeLerp = FlxMath.lerp(0, curtime / songLength, 0.15);
-    timeTxt.text = FlxStringUtil.formatTime(secondsTotal, false);
+    bars.timeTxt.text = FlxStringUtil.formatTime(secondsTotal, false);
   }
 
   /**
@@ -2465,7 +2450,7 @@ class PlayState extends MusicBeatSubState
 
         // Call an event to allow canceling the note hit.
         // NOTE: This is what handles the character animations!
-        var event:NoteScriptEvent = new HitNoteScriptEvent(note, 0.0, 0, 'perfect', 0);
+        var event:NoteScriptEvent = new HitNoteScriptEvent(note, 0.0, 0, 'perfect', false, 0);
         dispatchEvent(event);
 
         // Calling event.cancelEvent() skips all the other logic! Neat!
@@ -2562,7 +2547,7 @@ class PlayState extends MusicBeatSubState
         // Call an event to allow canceling the note hit.
         // NOTE: This is what handles the character animations!
 
-        var event:NoteScriptEvent = new HitNoteScriptEvent(note, 0.0, 0, 'perfect', 0);
+        var event:NoteScriptEvent = new HitNoteScriptEvent(note, 0.0, 0, 'perfect', false);
         dispatchEvent(event);
 
         // Calling event.cancelEvent() skips all the other logic! Neat!
@@ -2804,21 +2789,28 @@ class PlayState extends MusicBeatSubState
     FlxTween.tween(mstimertxt, {alpha: 0.001}, 0.2, {startDelay: 0.1});
 
     var healthChange = 0.0;
+    var isComboBreak = false;
     switch (daRating)
     {
       case 'killer':
         healthChange = Constants.HEALTH_KILLER_BONUS;
+        isComboBreak = Constants.JUDGEMENT_KILLER_COMBO_BREAK;
       case 'sick':
         healthChange = Constants.HEALTH_SICK_BONUS;
+        isComboBreak = Constants.JUDGEMENT_SICK_COMBO_BREAK;
       case 'good':
         healthChange = Constants.HEALTH_GOOD_BONUS;
+        isComboBreak = Constants.JUDGEMENT_GOOD_COMBO_BREAK;
       case 'bad':
         healthChange = Constants.HEALTH_BAD_BONUS;
+        isComboBreak = Constants.JUDGEMENT_BAD_COMBO_BREAK;
       case 'shit':
+        isComboBreak = Constants.JUDGEMENT_SHIT_COMBO_BREAK;
         healthChange = Constants.HEALTH_SHIT_BONUS;
     }
 
-    var event:HitNoteScriptEvent = new HitNoteScriptEvent(note, healthChange, score, daRating, Highscore.tallies.combo + 1);
+    var event:HitNoteScriptEvent = new HitNoteScriptEvent(note, healthChange, score, daRating, isComboBreak, Highscore.tallies.combo + 1, noteDiff,
+      daRating == 'sick');
     dispatchEvent(event);
 
     // Calling event.cancelEvent() skips all the other logic! Neat!
@@ -2826,8 +2818,13 @@ class PlayState extends MusicBeatSubState
 
     maxScore += Scoring.PBOT1_MAX_SCORE;
 
+    playerStrumline.hitNote(note, !isComboBreak);
+    if (event.doesNotesplash) playerStrumline.playNoteSplash(note.noteData.getDirection());
+    if (note.isHoldNote && note.holdNoteSprite != null) playerStrumline.playNoteHoldCover(note.holdNoteSprite);
+    vocals.playerVolume = 1;
     // Display the combo meter and add the calculation to the score.
-    popUpScore(note, event.score, event.judgement, event.healthChange);
+    applyScore(event.score, event.judgement, event.healthChange, event.isComboBreak);
+    popUpScore(event.judgement);
   }
 
   /**
@@ -2887,8 +2884,7 @@ class PlayState extends MusicBeatSubState
     if (Highscore.tallies.combo != 0)
     {
       // Break the combo.
-      if (Highscore.tallies.combo >= 10) comboPopUps.displayCombo(0);
-      Highscore.tallies.combo = 0;
+      applyScore(-10, 'miss', healthChange, true);
     }
 
     if (playSound)
@@ -3027,50 +3023,26 @@ class PlayState extends MusicBeatSubState
   }
 
   /**
-     * Handles health, score, and rating popups when a note is hit.
+     * Handles applying health, score, and ratings.
      */
-  function popUpScore(daNote:NoteSprite, score:Int, daRating:String, healthChange:Float):Void
+  function applyScore(score:Int, daRating:String, healthChange:Float, isComboBreak:Bool)
   {
-    if (daRating == 'miss')
-    {
-      // If daRating is 'miss', that means we made a mistake and should not continue.
-      FlxG.log.warn('popUpScore judged a note as a miss!');
-      // TODO: Remove this.
-      // comboPopUps.displayRating('miss');
-      return;
-    }
-    vocals.playerVolume = 1;
-
-    var isComboBreak = false;
     switch (daRating)
     {
       case 'killer':
         Highscore.tallies.killer += 1;
-        Highscore.tallies.totalNotesHit++;
-        isComboBreak = Constants.JUDGEMENT_KILLER_COMBO_BREAK;
-
       case 'sick':
         Highscore.tallies.sick += 1;
-        Highscore.tallies.totalNotesHit++;
-        isComboBreak = Constants.JUDGEMENT_SICK_COMBO_BREAK;
       case 'good':
         Highscore.tallies.good += 1;
-        Highscore.tallies.totalNotesHit++;
-        isComboBreak = Constants.JUDGEMENT_GOOD_COMBO_BREAK;
       case 'bad':
         Highscore.tallies.bad += 1;
-        Highscore.tallies.totalNotesHit++;
-        isComboBreak = Constants.JUDGEMENT_BAD_COMBO_BREAK;
       case 'shit':
         Highscore.tallies.shit += 1;
-        Highscore.tallies.totalNotesHit++;
-        isComboBreak = Constants.JUDGEMENT_SHIT_COMBO_BREAK;
-      default:
-        FlxG.log.error('Wuh? Buh? Guh? Note hit judgement was $daRating!');
+      case 'miss':
+        Highscore.tallies.missed += 1;
     }
-
     health += healthChange;
-
     if (isComboBreak)
     {
       // Break the combo, but don't increment tallies.misses.
@@ -3082,15 +3054,23 @@ class PlayState extends MusicBeatSubState
       Highscore.tallies.combo++;
       if (Highscore.tallies.combo > Highscore.tallies.maxCombo) Highscore.tallies.maxCombo = Highscore.tallies.combo;
     }
-
-    playerStrumline.hitNote(daNote, !isComboBreak);
-
-    if (daRating == 'sick')
-    {
-      playerStrumline.playNoteSplash(daNote.noteData.getDirection());
-    }
-
     songScore += score;
+  }
+
+  /**
+     * Handles health, score, and rating popups when a note is hit.
+     */
+  function popUpScore(daRating:String, ?combo:Int):Void
+  {
+    if (daRating == 'miss')
+    {
+      // If daRating is 'miss', that means we made a mistake and should not continue.
+      FlxG.log.warn('popUpScore judged a note as a miss!');
+      // TODO: Remove this.
+      // comboPopUps.displayRating('miss');
+      return;
+    }
+    if (combo == null) combo = Highscore.tallies.combo;
 
     if (!isPracticeMode)
     {
@@ -3130,12 +3110,7 @@ class PlayState extends MusicBeatSubState
       }
     }
     comboPopUps.displayRating(daRating);
-    if (Highscore.tallies.combo >= 10 || Highscore.tallies.combo == 0) comboPopUps.displayCombo(Highscore.tallies.combo);
-
-    if (daNote.isHoldNote && daNote.holdNoteSprite != null)
-    {
-      playerStrumline.playNoteHoldCover(daNote.holdNoteSprite);
-    }
+    if (combo >= 10 || combo == 0) comboPopUps.displayCombo(combo);
 
     vocals.playerVolume = 1;
   }
@@ -3676,6 +3651,87 @@ class PlayState extends MusicBeatSubState
     }
   }
 
+  // Better optimized than using some getProperty shit or idk psych engine lua shit for things
+  function getFlxEaseByString(?ease:String = '')
+  {
+    switch (ease)
+    {
+      case 'backin':
+        return FlxEase.backIn;
+      case 'backinout':
+        return FlxEase.backInOut;
+      case 'backout':
+        return FlxEase.backOut;
+      case 'bouncein':
+        return FlxEase.bounceIn;
+      case 'bounceinout':
+        return FlxEase.bounceInOut;
+      case 'bounceout':
+        return FlxEase.bounceOut;
+      case 'circin':
+        return FlxEase.circIn;
+      case 'circinout':
+        return FlxEase.circInOut;
+      case 'circout':
+        return FlxEase.circOut;
+      case 'cubein':
+        return FlxEase.cubeIn;
+      case 'cubeinout':
+        return FlxEase.cubeInOut;
+      case 'cubeout':
+        return FlxEase.cubeOut;
+      case 'elasticin':
+        return FlxEase.elasticIn;
+      case 'elasticinout':
+        return FlxEase.elasticInOut;
+      case 'elasticout':
+        return FlxEase.elasticOut;
+      case 'expoin':
+        return FlxEase.expoIn;
+      case 'expoinout':
+        return FlxEase.expoInOut;
+      case 'expoout':
+        return FlxEase.expoOut;
+      case 'quadin':
+        return FlxEase.quadIn;
+      case 'quadinout':
+        return FlxEase.quadInOut;
+      case 'quadout':
+        return FlxEase.quadOut;
+      case 'quartin':
+        return FlxEase.quartIn;
+      case 'quartinout':
+        return FlxEase.quartInOut;
+      case 'quartout':
+        return FlxEase.quartOut;
+      case 'quintin':
+        return FlxEase.quintIn;
+      case 'quintinout':
+        return FlxEase.quintInOut;
+      case 'quintout':
+        return FlxEase.quintOut;
+      case 'sinein':
+        return FlxEase.sineIn;
+      case 'sineinout':
+        return FlxEase.sineInOut;
+      case 'sineout':
+        return FlxEase.sineOut;
+      case 'smoothstepin':
+        return FlxEase.smoothStepIn;
+      case 'smoothstepinout':
+        return FlxEase.smoothStepInOut;
+      case 'smoothstepout':
+        return FlxEase.smoothStepInOut;
+      case 'smootherstepin':
+        return FlxEase.smootherStepIn;
+      case 'smootherstepinout':
+        return FlxEase.smootherStepInOut;
+      case 'smootherstepout':
+        return FlxEase.smootherStepOut;
+    }
+    return FlxEase.linear;
+  }
+
   /**
      * Cancel all active camera tweens simultaneously.
      */
@@ -3683,6 +3739,201 @@ class PlayState extends MusicBeatSubState
   {
     cancelCameraFollowTween();
     cancelCameraZoomTween();
+  }
+
+  /**
+     * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
+     */
+  public function tweennotey(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
+  {
+    // Cancel the current tween if it's active.
+    // cancelnoteTweens();
+    if (noteTweens != null)
+    {
+      noteTweens.cancel();
+    }
+
+    switch (strum)
+    {
+      case('player'):
+        for (note in playerStrumline.notes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+
+        for (note in playerStrumline.strumlineNotes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (splash in playerStrumline.noteSplashes.members)
+        {
+          if (splash.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(splash, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (hold in playerStrumline.noteHoldCovers.members)
+        {
+          if (hold.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(hold, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+      case('opponent'):
+        for (note in opponentStrumline.notes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+
+        for (note in opponentStrumline.strumlineNotes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (splash in opponentStrumline.noteSplashes.members)
+        {
+          if (splash.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(splash, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (hold in opponentStrumline.noteHoldCovers.members)
+        {
+          if (hold.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(hold, {y: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+    }
+  }
+
+  /**
+     * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
+     */
+  public function tweennotex(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
+  {
+    switch (strum)
+    {
+      case('player'):
+        for (note in playerStrumline.notes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+
+        for (note in playerStrumline.strumlineNotes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (splash in playerStrumline.noteSplashes.members)
+        {
+          if (splash.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(splash, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (hold in playerStrumline.noteHoldCovers.members)
+        {
+          if (hold.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(hold, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+      case('opponent'):
+        for (note in opponentStrumline.notes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+
+        for (note in opponentStrumline.strumlineNotes.members)
+        {
+          if (note.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(note, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (splash in opponentStrumline.noteSplashes.members)
+        {
+          if (splash.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(splash, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+        for (hold in opponentStrumline.noteHoldCovers.members)
+        {
+          if (hold.ID == notenumber)
+          {
+            noteTweens = FlxTween.tween(hold, {x: value}, duration,
+              {
+                ease: getFlxEaseByString(theease)
+              });
+          }
+        }
+    }
   }
 
   var prevScrollTargets:Array<Dynamic> = []; // used to snap scroll speed when things go unruely

@@ -92,6 +92,13 @@ class Conductor
    */
   public var songPosition(default, null):Float = 0;
 
+  /**
+   * The current position in the song in milliseconds, updated every frame.
+   * `songPosition` doesn't update every frame, meaning things that are based on `songPosition` but update faster than `songPosition` appear to lag.
+   * An example is note rendering. Using `frameSongPosition` instead of `songPosition` fixes this.
+   */
+  public var frameSongPosition(default, null):Float = 0;
+
   var prevTimestamp:Float = 0;
   var prevTime:Float = 0;
 
@@ -275,6 +282,13 @@ class Conductor
     return Save.instance.options.audioVisualOffset;
   }
 
+  public var combinedOffset(get, never):Float;
+
+  function get_combinedOffset():Float
+  {
+    return instrumentalOffset + audioVisualOffset + inputOffset;
+  }
+
   /**
    * The number of beats in a measure. May be fractional depending on the time signature.
    */
@@ -397,20 +411,35 @@ class Conductor
    */
   public function update(?songPos:Float, applyOffsets:Bool = true, forceDispatch:Bool = false)
   {
+    var currentTime:Float = (FlxG.sound.music != null) ? FlxG.sound.music.time : 0.0;
+    var currentLength:Float = (FlxG.sound.music != null) ? FlxG.sound.music.length : 0.0;
+
     if (songPos == null)
     {
-      songPos = (FlxG.sound.music != null) ? FlxG.sound.music.time : 0.0;
+      songPos = currentTime;
     }
+    var frameSongPos:Float = frameSongPosition + FlxG.elapsed * 1000;
 
     // Take into account instrumental and file format song offsets.
-    songPos += applyOffsets ? (instrumentalOffset + formatOffset + audioVisualOffset) : 0;
+    songPos += applyOffsets ? (combinedOffset) : 0;
 
     var oldMeasure:Float = this.currentMeasure;
     var oldBeat:Float = this.currentBeat;
     var oldStep:Float = this.currentStep;
 
+    // If the song is playing, limit the song position to the length of the song or beginning of the song.
+    if (FlxG.sound.music != null && FlxG.sound.music.playing)
+    {
+      this.songPosition = Math.min(currentLength, Math.max(0, songPos));
+      this.frameSongPosition = Math.min(currentLength, Math.max(0, frameSongPos));
+    }
+    else
+    {
+      this.songPosition = songPos;
+      this.frameSongPosition = frameSongPos;
+    }
+
     // Set the song position we are at (for purposes of calculating note positions, etc).
-    this.songPosition = songPos;
 
     currentTimeChange = timeChanges[0];
     if (this.songPosition > 0.0)
@@ -430,7 +459,8 @@ class Conductor
     else if (currentTimeChange != null && this.songPosition > 0.0)
     {
       // roundDecimal prevents representing 8 as 7.9999999
-      this.currentStepTime = FlxMath.roundDecimal((currentTimeChange.beatTime * Constants.STEPS_PER_BEAT) + (this.songPosition - currentTimeChange.timeStamp) / stepLengthMs, 6);
+      this.currentStepTime = FlxMath.roundDecimal((currentTimeChange.beatTime * Constants.STEPS_PER_BEAT)
+        + (this.songPosition - currentTimeChange.timeStamp) / stepLengthMs, 6);
       this.currentBeatTime = currentStepTime / Constants.STEPS_PER_BEAT;
       this.currentMeasureTime = currentStepTime / stepsPerMeasure;
       this.currentStep = Math.floor(currentStepTime);
@@ -472,6 +502,8 @@ class Conductor
       prevTime = this.songPosition;
       prevTimestamp = Std.int(Timer.stamp() * 1000);
     }
+    // Set the frameSongPosition to the actual songPosition every time it actually changes to prevent desync
+    frameSongPosition = this.songPosition;
   }
 
   /**
@@ -667,6 +699,7 @@ class Conductor
 
     FlxG.watch.addQuick('songPosition', target.songPosition);
     FlxG.watch.addQuick('bpm', target.bpm);
+    FlxG.watch.addQuick('frameSongPosition', target.frameSongPosition);
     FlxG.watch.addQuick('currentMeasureTime', target.currentMeasureTime);
     FlxG.watch.addQuick('currentBeatTime', target.currentBeatTime);
     FlxG.watch.addQuick('currentStepTime', target.currentStepTime);

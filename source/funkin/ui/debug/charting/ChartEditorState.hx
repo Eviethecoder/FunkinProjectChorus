@@ -31,6 +31,7 @@ import funkin.audio.VoicesGroup;
 import funkin.audio.waveform.WaveformSprite;
 import funkin.data.notestyle.NoteStyleRegistry;
 import funkin.data.notestyle.NoteStyleData;
+import funkin.data.hudstyle.HudStyleRegistry;
 import funkin.play.notes.notestyle.NoteStyle;
 import funkin.data.song.SongData.SongCharacterData;
 import funkin.data.song.SongData.SongChartData;
@@ -38,6 +39,7 @@ import funkin.data.song.SongData.SongEventData;
 import funkin.data.song.SongData.SongMetadata;
 import funkin.data.song.SongData.SongNoteData;
 import funkin.data.song.SongData.SongOffsets;
+import funkin.data.song.SongData.NoteParamData;
 import funkin.data.song.SongDataUtils;
 import funkin.data.song.SongRegistry;
 import funkin.data.stage.StageData;
@@ -48,6 +50,7 @@ import funkin.input.TurboActionHandler;
 import funkin.input.TurboButtonHandler;
 import funkin.input.TurboKeyHandler;
 import funkin.modding.events.ScriptEvent;
+import funkin.play.notes.notekind.NoteKindManager;
 import funkin.play.character.BaseCharacter.CharacterType;
 import funkin.play.character.CharacterData;
 import funkin.play.character.CharacterData.CharacterDataParser;
@@ -131,6 +134,7 @@ import haxe.ui.events.UIEvent;
 import haxe.ui.focus.FocusManager;
 import haxe.ui.Toolkit;
 import openfl.display.BitmapData;
+import funkin.ui.debug.charting.util.ChartEditorDropdowns;
 
 using Lambda;
 
@@ -179,6 +183,11 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
   public static final PLAYHEAD_SCROLL_AREA_WIDTH:Int = Std.int(GRID_SIZE);
 
   /**
+   * Hitsounds are weird. this will fix it
+   */
+  public static final HITSOUND_OFFSET:Float = -60;
+
+  /**
    * The height of the playhead, in pixels.
    */
   public static final PLAYHEAD_HEIGHT:Int = Std.int(GRID_SIZE / 8);
@@ -187,6 +196,11 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
    * strumline for vortex shit (to be added)
    */
   public var strumlinenote:FlxTypedGroup<StrumlineNote>;
+
+  /**
+   * strumline for vortex shit (to be added)
+   */
+  public var currenderedText:FlxTypedGroup<AbsoluteText>;
 
   /**
    * The width of the border between grid squares, where the crosshair changes from "Place Notes" to "Select Notes".
@@ -545,6 +559,11 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
    * The note kind to use for notes being placed in the chart. Defaults to `null`.
    */
   var noteKindToPlace:Null<String> = null;
+
+  /**
+   * The note params to use for notes being placed in the chart. Defaults to `[]`.
+   */
+  var noteParamsToPlace:Array<NoteParamData> = [];
 
   /**
    * The event type to use for events being placed in the chart. Defaults to `''`.
@@ -1413,16 +1432,23 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     return value;
   }
 
-  var currentSongNoteStyle(get, set):String;
+  var currentSongHudStyle(get, set):String;
 
-  function get_currentSongNoteStyle():String
+  function get_currentSongHudStyle():String
   {
-    return Constants.DEFAULT_NOTE_STYLE;
+    if (currentSongMetadata.playData.hudStyle == null
+      || currentSongMetadata.playData.hudStyle == ''
+      || currentSongMetadata.playData.hudStyle == 'item')
+    {
+      // Initialize to the default value if not set.
+      currentSongMetadata.playData.hudStyle = Constants.DEFAULT_HUD_STYLE;
+    }
+    return currentSongMetadata.playData.hudStyle;
   }
 
-  function set_currentSongNoteStyle(value:String):String
+  function set_currentSongHudStyle(value:String):String
   {
-    return Constants.DEFAULT_NOTE_STYLE;
+    return currentSongMetadata.playData.hudStyle = value;
   }
 
   var currentSongFreeplayPreviewStart(get, set):Int;
@@ -2481,7 +2507,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
     gridGhostNote = new ChartEditorNoteSprite(this);
     gridGhostNote.alpha = 0.6;
-    gridGhostNote.noteData = new SongNoteData(0, 0, 0, "");
+    gridGhostNote.noteData = new SongNoteData(0, 0, 0, "", []);
     gridGhostNote.visible = false;
     add(gridGhostNote);
     gridGhostNote.zIndex = 11;
@@ -2570,7 +2596,6 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     notePreviewPlayhead.y = notePreview.y;
     add(notePreviewPlayhead);
     notePreviewPlayhead.zIndex = 31;
-
     setNotePreviewViewportBounds(calculateNotePreviewViewportBounds());
 
     strumlinenote = new FlxTypedGroup<StrumlineNote>();
@@ -2712,6 +2737,8 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     renderedSelectionSquares.setPosition(gridTiledSprite.x, gridTiledSprite.y);
     add(renderedSelectionSquares);
     renderedSelectionSquares.zIndex = 26;
+    currenderedText = new FlxTypedGroup<AbsoluteText>();
+    add(currenderedText);
   }
 
   function buildAdditionalUI():Void
@@ -3645,6 +3672,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
         // The note sprite handles animation playback and positioning.
         noteSprite.noteData = noteData;
+        noteSprite.noteStyle = NoteKindManager.getNoteStyleId(noteData.kind, Constants.DEFAULT_NOTE_STYLE) ?? Constants.DEFAULT_NOTE_STYLE;
         noteSprite.overrideStepTime = null;
         noteSprite.overrideData = null;
 
@@ -3668,6 +3696,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
           holdNoteSprite.setHeightDirectly(noteLengthPixels);
 
+          holdNoteSprite.noteStyle = NoteKindManager.getNoteStyleId(noteSprite.noteData.kind, Constants.DEFAULT_NOTE_STYLE) ?? Constants.DEFAULT_NOTE_STYLE;
           holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
 
           trace(holdNoteSprite.x + ', ' + holdNoteSprite.y + ', ' + holdNoteSprite.width + ', ' + holdNoteSprite.height);
@@ -3733,6 +3762,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
         holdNoteSprite.setHeightDirectly(noteLengthPixels);
 
+        holdNoteSprite.noteStyle = NoteKindManager.getNoteStyleId(noteData.kind, Constants.DEFAULT_NOTE_STYLE) ?? Constants.DEFAULT_NOTE_STYLE;
         holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
 
         displayedHoldNoteData.push(noteData);
@@ -5762,21 +5792,21 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     // TODO: Rework asset system so we can remove this jank.
     switch (currentSongStage)
     {
-      case 'mainStage':
+      case 'mainStage' | 'mainStageErect':
         PlayStatePlaylist.campaignId = 'week1';
-      case 'spookyMansion':
+      case 'spookyMansion' | 'spookyMansionErect':
         PlayStatePlaylist.campaignId = 'week2';
-      case 'phillyTrain':
+      case 'phillyTrain' | 'phillyTrainErect':
         PlayStatePlaylist.campaignId = 'week3';
-      case 'limoRide':
+      case 'limoRide' | 'limoRideErect':
         PlayStatePlaylist.campaignId = 'week4';
-      case 'mallXmas' | 'mallEvil':
+      case 'mallXmas' | 'mallXmasErect' | 'mallEvil':
         PlayStatePlaylist.campaignId = 'week5';
       case 'school' | 'schoolEvil':
         PlayStatePlaylist.campaignId = 'week6';
       case 'tankmanBattlefield':
         PlayStatePlaylist.campaignId = 'week7';
-      case 'phillyStreets' | 'phillyBlazin' | 'phillyBlazin2':
+      case 'phillyStreets' | 'phillyStreetsErect' | 'phillyBlazin' | 'phillyBlazin2':
         PlayStatePlaylist.campaignId = 'weekend1';
     }
     Paths.setCurrentLevel(PlayStatePlaylist.campaignId);
@@ -6351,10 +6381,10 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     {
       // Check for notes between the old and new song positions.
 
-      if (noteData.time < oldSongPosition) // Note is in the past.
+      if (noteData.time < oldSongPosition - HITSOUND_OFFSET) // Note is in the past.
         continue;
 
-      if (noteData.time > newSongPosition) // Note is in the future.
+      if (noteData.time > newSongPosition - HITSOUND_OFFSET) // Note is in the future.
         return; // Assume all notes are also in the future.
 
       // Note was just hit.
@@ -6365,7 +6395,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
       var tempNote:NoteSprite = new NoteSprite(NoteStyleRegistry.instance.fetchDefault());
       tempNote.noteData = noteData;
       tempNote.scrollFactor.set(0, 0);
-      var event:NoteScriptEvent = new HitNoteScriptEvent(tempNote, 0.0, 0, 'perfect', 0);
+      var event:NoteScriptEvent = new HitNoteScriptEvent(tempNote, 0.0, 0, 'perfect', true);
       dispatchEvent(event);
 
       // notehit handeler

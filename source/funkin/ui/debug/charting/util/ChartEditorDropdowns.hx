@@ -1,7 +1,7 @@
 package funkin.ui.debug.charting.util;
 
-import funkin.data.notestyle.NoteStyleRegistry;
-import funkin.play.notes.notestyle.NoteStyle;
+import funkin.data.hudstyle.HudStyleRegistry;
+import funkin.play.hudstyle.HudStyle;
 import funkin.data.stage.StageData;
 import funkin.play.event.SongEvent;
 import funkin.data.stage.StageRegistry;
@@ -126,17 +126,17 @@ class ChartEditorDropdowns
   {
     dropDown.dataSource.clear();
 
-    var noteStyleIds:Array<String> = NoteStyleRegistry.instance.listEntryIds();
+    var hudStyleIds:Array<String> = HudStyleRegistry.instance.listEntryIds();
 
     var returnValue:DropDownEntry = {id: "funkin", text: "Funkin'"};
 
-    for (noteStyleId in noteStyleIds)
+    for (hudStyleId in hudStyleIds)
     {
-      var noteStyle:Null<NoteStyle> = NoteStyleRegistry.instance.fetchEntry(noteStyleId);
-      if (noteStyle == null) continue;
+      var hudStyle:Null<HudStyle> = HudStyleRegistry.instance.fetchEntry(hudStyleId);
+      if (hudStyle == null) continue;
 
-      var value = {id: noteStyleId, text: noteStyle.getName()};
-      if (startingStyleId == noteStyleId) returnValue = value;
+      var value = {id: hudStyleId, text: hudStyle.getName()};
+      if (startingStyleId == hudStyleId) returnValue = value;
 
       dropDown.dataSource.add(value);
     }
@@ -146,7 +146,7 @@ class ChartEditorDropdowns
     return returnValue;
   }
 
-  static final NOTE_KINDS:Map<String, String> = [
+  public static final NOTE_KINDS:Map<String, String> = [
     // Base
     "" => "Default",
     "~CUSTOM~" => "Custom",

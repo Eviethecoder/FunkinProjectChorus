@@ -17,7 +17,7 @@ class DataError
         trace('  Invalid enum value (expected "$expected", got "$value")');
         printPos(pos);
       case InvalidEnumConstructor(value, expected, pos):
-        trace('  Invalid enum constructor (epxected "$expected", got "$value")');
+        trace('  Invalid enum constructor (epxected "$expected", hgot "$value")');
         printPos(pos);
       case UninitializedVariable(vari, pos):
         trace('  Uninitialized variable "$vari"');

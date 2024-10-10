@@ -455,13 +455,13 @@ class TitleState extends MusicBeatState
           switch (i + 1)
           {
             case 1:
-              createCoolText(['The', 'Funkin Crew Inc']);
+              createCoolText(['TheFunkin Crew Inc+', 'Team Catastrophe Studios']);
             case 3:
               addMoreText('presents');
             case 4:
               deleteCoolText();
             case 5:
-              createCoolText(['In association', 'with']);
+              createCoolText(['Not in association', 'with']);
             case 7:
               addMoreText('newgrounds');
               if (ngSpr != null) ngSpr.visible = true;
@@ -514,6 +514,13 @@ class TitleState extends MusicBeatState
 
       FlxG.camera.flash(FlxColor.WHITE, initialized ? 1 : 4);
       remove(credGroup);
+      logoBl.angle = -4;
+
+      new FlxTimer().start(0.01, function(tmr:FlxTimer) {
+        if (logoBl.angle == -4) FlxTween.angle(logoBl, logoBl.angle, 4, 4, {ease: FlxEase.quartInOut});
+        if (logoBl.angle == 4) FlxTween.angle(logoBl, logoBl.angle, -4, 4, {ease: FlxEase.quartInOut});
+      }, 0);
+
       skippedIntro = true;
     }
   }

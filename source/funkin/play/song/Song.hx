@@ -98,6 +98,28 @@ class Song implements IPlayStateScriptedClass implements IRegistryEntry<SongMeta
   }
 
   /**
+   * Return the list of available alternate instrumentals.
+   * Scripts can override this, fun.
+   * @param variationId
+   * @param difficultyId
+   */
+  public function listAltInstrumentalIds(difficultyId:String, variationId:String):Array<String>
+  {
+    var targetDifficulty:Null<SongDifficulty> = getDifficulty(difficultyId, variationId);
+    if (targetDifficulty == null) return [];
+
+    return targetDifficulty?.characters?.altInstrumentals ?? [];
+  }
+
+  public function getBaseInstrumentalId(difficultyId:String, variationId:String):String
+  {
+    var targetDifficulty:Null<SongDifficulty> = getDifficulty(difficultyId, variationId);
+    if (targetDifficulty == null) return '';
+
+    return targetDifficulty?.characters?.instrumental ?? '';
+  }
+
+  /**
    * Set to false if the song was edited in the charter and should not be saved as a high score.
    */
   public var validScore:Bool = true;
@@ -300,6 +322,7 @@ class Song implements IPlayStateScriptedClass implements IRegistryEntry<SongMeta
         difficulty.album = metadata.playData.album;
 
         difficulty.stage = metadata.playData.stage;
+        difficulty.hudStyle = metadata.playData.hudStyle;
 
         difficulty.characters = metadata.playData.characters;
 
@@ -618,6 +641,7 @@ class SongDifficulty
   public var timeChanges:Array<SongTimeChange> = [];
 
   public var stage:String = Constants.DEFAULT_STAGE;
+  public var hudStyle:String = Constants.DEFAULT_HUD_STYLE;
   public var characters:SongCharacterData = null;
 
   public var scrollSpeed:Float = Constants.DEFAULT_SCROLLSPEED;

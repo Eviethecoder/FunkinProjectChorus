@@ -13,6 +13,7 @@ import funkin.data.freeplay.album.AlbumRegistry;
 import funkin.modding.module.ModuleHandler;
 import funkin.play.character.CharacterData.CharacterDataParser;
 import funkin.save.Save;
+import funkin.play.notes.notekind.NoteKindManager;
 import funkin.util.FileUtil;
 import funkin.util.macro.ClassMacro;
 import polymod.backends.PolymodAssets.PolymodAssetType;
@@ -379,6 +380,7 @@ class PolymodHandler
     AlbumRegistry.instance.loadEntries();
     StageRegistry.instance.loadEntries();
     CharacterDataParser.loadCharacterCache(); // TODO: Migrate characters to BaseRegistry.
+    NoteKindManager.loadScripts();
     ModuleHandler.loadModuleCache();
   }
 }

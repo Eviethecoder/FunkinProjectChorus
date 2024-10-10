@@ -87,7 +87,7 @@ class LoadingState extends MusicBeatSubState
       }
 
       checkLibrary('shared');
-      checkLibrary(PlayStatePlaylist.campaignId);
+      checkLibrary(PlayStatePlaylist.campaignId ?? stageDirectory);
       checkLibrary('tutorial');
 
       var fadeTime:Float = 0.5;
@@ -205,6 +205,8 @@ class LoadingState extends MusicBeatSubState
     return Paths.inst(PlayState.instance.currentSong.id);
   }
 
+  static var stageDirectory:String = "shared";
+
   /**
    * Starts the transition to a new `PlayState` to start a new song.
    * First switches to the `LoadingState` if assets need to be loaded.
@@ -214,7 +216,12 @@ class LoadingState extends MusicBeatSubState
    */
   public static function loadPlayState(params:PlayStateParams, shouldStopMusic = false, asSubState = false, ?onConstruct:PlayState->Void):Void
   {
-    Paths.setCurrentLevel(PlayStatePlaylist.campaignId);
+    var daChart = params.targetSong.getDifficulty(params.targetDifficulty ?? Constants.DEFAULT_DIFFICULTY,
+      params.targetVariation ?? Constants.DEFAULT_VARIATION);
+
+    var daStage = funkin.data.stage.StageRegistry.instance.fetchEntry(daChart.stage);
+    stageDirectory = daStage?._data?.directory ?? "shared";
+    Paths.setCurrentLevel(stageDirectory);
     var playStateCtor:() -> PlayState = function() {
       return new PlayState(params);
     };
@@ -291,28 +298,38 @@ class LoadingState extends MusicBeatSubState
     FunkinSprite.preparePurgeCache();
     FunkinSprite.cacheTexture(Paths.image('healthBar'));
     FunkinSprite.cacheTexture(Paths.image('menuDesat'));
-    FunkinSprite.cacheTexture(Paths.image('combo'));
-    FunkinSprite.cacheTexture(Paths.image('num0'));
-    FunkinSprite.cacheTexture(Paths.image('num1'));
-    FunkinSprite.cacheTexture(Paths.image('num2'));
-    FunkinSprite.cacheTexture(Paths.image('num3'));
-    FunkinSprite.cacheTexture(Paths.image('num4'));
-    FunkinSprite.cacheTexture(Paths.image('num5'));
-    FunkinSprite.cacheTexture(Paths.image('num6'));
-    FunkinSprite.cacheTexture(Paths.image('num7'));
-    FunkinSprite.cacheTexture(Paths.image('num8'));
-    FunkinSprite.cacheTexture(Paths.image('num9'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/combo'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num0'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num1'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num2'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num3'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num4'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num5'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num6'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num7'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num8'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/num9'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/combo'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num0'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num1'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num2'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num3'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num4'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num5'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num6'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num7'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num8'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/pixel/num9'));
     FunkinSprite.cacheTexture(Paths.image('notes', 'shared'));
     FunkinSprite.cacheTexture(Paths.image('noteSplashes', 'shared'));
     FunkinSprite.cacheTexture(Paths.image('noteStrumline', 'shared'));
     FunkinSprite.cacheTexture(Paths.image('NOTE_hold_assets'));
-    FunkinSprite.cacheTexture(Paths.image('ready', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('set', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('go', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('sick', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('good', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('bad', 'shared'));
-    FunkinSprite.cacheTexture(Paths.image('shit', 'shared'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/sick'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/killer'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/good'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/bad'));
+    FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/shit'));
+
     FunkinSprite.cacheTexture(Paths.image('miss', 'shared')); // TODO: remove this
 
     // List all image assets in the level's library.
