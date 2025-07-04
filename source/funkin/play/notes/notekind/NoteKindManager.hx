@@ -3,10 +3,10 @@ package funkin.play.notes.notekind;
 import funkin.modding.events.ScriptEventDispatcher;
 import funkin.modding.events.ScriptEvent;
 import funkin.ui.debug.charting.util.ChartEditorDropdowns;
-import funkin.data.notes.SongNoteSchema;
 import funkin.data.notestyle.NoteStyleRegistry;
 import funkin.play.notes.notestyle.NoteStyle;
 import funkin.play.notes.notekind.ScriptedNoteKind;
+import funkin.play.notes.notekind.NoteKind.NoteKindParam;
 
 class NoteKindManager
 {
@@ -23,9 +23,10 @@ class NoteKindManager
         try
         {
           var script:NoteKind = ScriptedNoteKind.init(scriptedClass, "unknown");
+          trace(script.noanim);
           trace(' Initialized scripted note kind: ${script.noteKind}');
           noteKinds.set(script.noteKind, script);
-          ChartEditorDropdowns.NOTE_KINDS.set(script.noteKind, script.title);
+          ChartEditorDropdowns.NOTE_KINDS.set(script.noteKind, script.description);
         }
         catch (e)
         {
@@ -104,8 +105,59 @@ class NoteKindManager
     return noteStyleId;
   }
 
-  public static function getSchema(noteKind:Null<String>):Null<SongNoteSchema>
+  /**
+   * Retrive custom params of the given note kind
+   * @param noteKind Name of the note kind
+   * @return Array<NoteKindParam>
+   */
+  public static function getNoteKind(noteKind:Null<String>):Null<NoteKind>
   {
-    return noteKinds.get(noteKind)?.schema;
+    if (noteKind == null)
+    {
+      return null;
+    }
+    else
+    {
+      return noteKinds.get(noteKind);
+    }
+  }
+
+  public static function getNoteKindanimtype(noteKind:Null<String>):Null<Bool>
+  {
+    if (noteKind == null)
+    {
+      return null;
+    }
+    else
+    {
+      return noteKinds.get(noteKind)?.noanim ?? false;
+    }
+  }
+
+  public static function getNoteKindsuffix(noteKind:Null<String>):Null<String>
+  {
+    if (noteKind == null)
+    {
+      return null;
+    }
+    else
+    {
+      return noteKinds.get(noteKind)?.suffix ?? '';
+    }
+  }
+
+  /**
+   * Retrive custom params of the given note kind
+   * @param noteKind Name of the note kind
+   * @return Array<NoteKindParam>
+   */
+  public static function getParams(noteKind:Null<String>):Array<NoteKindParam>
+  {
+    if (noteKind == null)
+    {
+      return [];
+    }
+
+    return noteKinds.get(noteKind)?.params ?? [];
   }
 }

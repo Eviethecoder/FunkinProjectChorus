@@ -14,11 +14,13 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import funkin.audio.FunkinSound;
 import funkin.data.song.SongRegistry;
+import funkin.play.song.Song;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.graphics.FunkinSprite;
 import funkin.play.cutscene.VideoCutscene;
 import funkin.play.PlayState;
 import funkin.ui.AtlasText;
+import funkin.ui.options.OptionsState;
 import funkin.ui.debug.latency.LatencyState;
 import funkin.ui.MusicBeatSubState;
 import funkin.ui.transition.StickerSubState;
@@ -42,6 +44,11 @@ class PauseSubState extends MusicBeatSubState
   // ===============
   // Constants
   // ===============
+  public static var currentSong:Song = null;
+
+  public static var currentDifficulty:String;
+
+  public static var currentVariation:String;
 
   /**
    * Pause menu entries for when the game is paused during a song.
@@ -754,9 +761,19 @@ class PauseSubState extends MusicBeatSubState
 
     PlayState.instance.deathCounter = 0;
 
+    currentVariation = PlayState.instance.currentVariation;
+    currentSong = SongRegistry.instance.fetchEntry(PlayState.instance.currentSong.id.toLowerCase());
+    currentDifficulty = PlayState.instance.currentDifficulty;
+    trace(currentSong);
+
     FlxTransitionableState.skipNextTransIn = true;
     FlxTransitionableState.skipNextTransOut = true;
-    state.openSubState(new funkin.ui.transition.StickerSubState(null, (sticker) -> new funkin.ui.options.OptionsState()));
+
+    FlxG.switchState(() -> new OptionsState());
+    OptionsState.togame = true;
+    OptionsState.currentSong = currentSong;
+    OptionsState.currentVariation = currentVariation;
+    OptionsState.currentDifficulty = currentDifficulty;
   }
 
   /**

@@ -57,6 +57,7 @@ class DebugMenuSubState extends MusicBeatSubState
     onMenuChange(createItem("CHART EDITOR", openChartEditor));
     // createItem("Input Offset Testing", openInputOffsetTesting);
     createItem("ANIMATION EDITOR", openAnimationEditor);
+    createItem("Mod Menu Test", openModMenu);
     // createItem("STAGE EDITOR", openStageEditor);
     // createItem("TEST STICKERS", testStickers);
     #if sys
@@ -106,6 +107,12 @@ class DebugMenuSubState extends MusicBeatSubState
   {
     FlxG.switchState(() -> new funkin.ui.debug.anim.DebugBoundingState());
     trace('Animation Editor');
+  }
+
+  function openModMenu()
+  {
+    FlxG.switchState(() -> new funkin.ui.debug.ModMenu());
+    trace('Mod Menu state Test ');
   }
 
   function testStickers()

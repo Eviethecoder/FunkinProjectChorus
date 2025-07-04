@@ -70,6 +70,11 @@ class Scoring
   }
 
   /**
+   * The talliess used for the ranking
+   */
+  public static var rankDificulty:Int;
+
+  /**
    * The maximum score a note can receive.
    */
   public static final PBOT1_MAX_SCORE:Int = 500;
@@ -351,17 +356,27 @@ class Scoring
   {
     if (scoreData?.tallies.totalNotes == 0 || scoreData == null) return null;
 
+    switch (Preferences.rankingtype)
+    {
+      case('Hard'):
+        rankDificulty = scoreData.tallies.killer;
+      case('Intended'):
+        rankDificulty = (scoreData.tallies.killer + scoreData.tallies.sick);
+      case('Pussy'):
+        rankDificulty = (scoreData.tallies.killer + scoreData.tallies.sick + scoreData.tallies.good);
+    }
+
     // we can return null here, meaning that the player hasn't actually played and finished the song (thus has no data)
     if (scoreData.tallies.totalNotes == 0) return null;
 
     // Perfect (Platinum) is a Sick Full Clear
-    var isPerfectGold = scoreData.tallies.sick == scoreData.tallies.totalNotes;
+    var isPerfectGold = scoreData.tallies.killer == scoreData.tallies.totalNotes;
     if (isPerfectGold) return ScoringRank.PERFECT_GOLD;
 
     // Else, use the standard grades
 
     // Grade % (only good and sick), 1.00 is a full combo
-    var grade = (scoreData.tallies.sick + scoreData.tallies.good) / scoreData.tallies.totalNotes;
+    var grade = rankDificulty / scoreData.tallies.totalNotes;
     // Clear % (including bad and shit). 1.00 is a full clear but not a full combo
     var clear = (scoreData.tallies.totalNotesHit) / scoreData.tallies.totalNotes;
 
@@ -570,7 +585,7 @@ enum abstract ScoringRank(String)
     }
   }
 
-  public function getFreeplayRankIconAsset():Null<String>
+  public function getFreeplayRankIconAsset():String
   {
     switch (abstract)
     {
@@ -587,7 +602,7 @@ enum abstract ScoringRank(String)
       case SHIT:
         return 'LOSS';
       default:
-        return null;
+        return 'LOSS';
     }
   }
 

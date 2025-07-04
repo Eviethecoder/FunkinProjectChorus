@@ -102,6 +102,10 @@ typedef NoteStyleAssetData<T> =
   @:optional
   var offsets:Null<Array<Float>>;
 
+  @:default(1.0)
+  @:optional
+  var alpha:Float;
+
   /**
    * If true, animations will be played on the graphic.
    * @default `false` to save performance.
@@ -166,23 +170,43 @@ typedef NoteStyleData_NoteSplash =
   @:default(true)
   var enabled:Bool;
 
+  @:optional
+  @:default(24)
+  var framerateDefault:Int;
+
+  @:optional
+  @:default(2)
+  var framerateVariance:Int;
+
+  @:optional
+  @:default("normal")
+  var blendMode:String;
+
   // these all have to be optional unless you want to have to put "animation": "" 10 times over for something that's disabled
   @:optional
   var left1:UnnamedAnimationData;
   @:optional
   var left2:UnnamedAnimationData;
   @:optional
+  var left3:UnnamedAnimationData;
+  @:optional
   var down1:UnnamedAnimationData;
   @:optional
   var down2:UnnamedAnimationData;
+  @:optional
+  var down3:UnnamedAnimationData;
   @:optional
   var up1:UnnamedAnimationData;
   @:optional
   var up2:UnnamedAnimationData;
   @:optional
+  var up3:UnnamedAnimationData;
+  @:optional
   var right1:UnnamedAnimationData;
   @:optional
   var right2:UnnamedAnimationData;
+  @:optional
+  var right3:UnnamedAnimationData;
 };
 
 typedef NoteStyleData_HoldNoteCover =

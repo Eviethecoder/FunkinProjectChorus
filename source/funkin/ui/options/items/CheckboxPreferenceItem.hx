@@ -5,15 +5,16 @@ import flixel.FlxSprite.FlxSprite;
 class CheckboxPreferenceItem extends FlxSprite
 {
   public var currentValue(default, set):Bool;
+  public var description:String;
 
-  public function new(x:Float, y:Float, defaultValue:Bool = false)
+  public function new(x:Float, y:Float, defaultValue:Bool = false, desc:String)
   {
     super(x, y);
 
     frames = Paths.getSparrowAtlas('checkboxThingie');
     animation.addByPrefix('static', 'Check Box unselected', 24, false);
     animation.addByPrefix('checked', 'Check Box selecting animation', 24, false);
-
+    description = desc;
     setGraphicSize(Std.int(width * 0.7));
     updateHitbox();
 

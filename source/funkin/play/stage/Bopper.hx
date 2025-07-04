@@ -267,6 +267,7 @@ class Bopper extends StageProp implements IPlayStateScriptedClass
   }
 
   public var canPlayOtherAnims:Bool = true;
+  public var ignoreExclusionPref:Array<String> = [];
 
   /**
    * @param name The name of the animation to play.

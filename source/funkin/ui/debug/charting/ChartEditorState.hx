@@ -542,6 +542,9 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
    */
   var playbarButtonPressed:Null<String> = null;
 
+  public var lilbftime:FlxTimer = new FlxTimer();
+  public var lilopptime:FlxTimer = new FlxTimer();
+
   /**
    * Whether the head of the playbar is currently being dragged with the mouse by the user.
    */
@@ -2249,12 +2252,8 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     lilBf.animation.add("3", [12, 13, 14], 12, false);
     lilBf.animation.add("yeah", [17, 20, 23], 12, false);
     lilBf.animation.play("idle");
-    lilBf.animation.finishCallback = function(name:String) {
-      lilBf.animation.play("idle", true, false, lilBf.animation.getByName("idle").numFrames - 2);
-    }
     lilBf.scrollFactor.set();
     add(lilBf);
-
     lilOpp = new FlxSprite(lilStage.x + 20, 432);
     lilOpp.frames = Paths.getSparrowAtlas('ui/chart-editor/lilOpp');
     lilOpp.animation.addByPrefix('idle', 'idle', 24, true);
@@ -2263,9 +2262,6 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     lilOpp.animation.addByPrefix('2', 'up', 24, false);
     lilOpp.animation.addByPrefix('3', 'right', 24, false);
     lilOpp.animation.play("idle");
-    lilOpp.animation.finishCallback = function(name:String) {
-      lilOpp.animation.play("idle", true, false, lilOpp.animation.getByName("idle").numFrames - 2);
-    }
     lilOpp.scrollFactor.set();
     add(lilOpp);
 
@@ -2321,6 +2317,18 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
         this.openBackupAvailableDialog(welcomeDialog);
       }
     }
+    updateDiscordRPC();
+  }
+
+  public function updateDiscordRPC():Void
+  {
+    var name = get_currentSongName();
+    funkin.api.discord.DiscordClient.instance.setPresence(
+      {
+        // TODO: Make this display the song name and update when it changes.
+        state: '${name} [${selectedDifficulty}]',
+        details: 'Chart Editor [Charting]'
+      });
   }
 
   function setupWelcomeMusic()
@@ -3065,13 +3073,22 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
     menubarItemDownscroll.onClick = event -> isViewDownscroll = event.value;
     menubarItemDownscroll.selected = isViewDownscroll;
 
-    menubarItemDifficultyUp.onClick = _ -> incrementDifficulty(1);
-    menubarItemDifficultyDown.onClick = _ -> incrementDifficulty(-1);
+    menubarItemDifficultyUp.onClick = _ -> {
+      incrementDifficulty(1);
+    }
+    menubarItemDifficultyDown.onClick = _ -> {
+      incrementDifficulty(-1);
+    }
 
     menuBarItemThemeLight.onChange = function(event:UIEvent) {
       if (event.target.value) currentTheme = ChartEditorTheme.Light;
     };
     menuBarItemThemeLight.selected = currentTheme == ChartEditorTheme.Light;
+
+    menuBarItemThemeLava.onChange = function(event:UIEvent) {
+      if (event.target.value) currentTheme = ChartEditorTheme.Lava;
+    };
+    menuBarItemThemeLava.selected = currentTheme == ChartEditorTheme.Lava;
 
     menuBarItemThemeDark.onChange = function(event:UIEvent) {
       if (event.target.value) currentTheme = ChartEditorTheme.Dark;
@@ -3758,6 +3775,8 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
         var noteLengthPixels:Float = noteData.getStepLength() * GRID_SIZE;
 
         holdNoteSprite.noteData = noteData;
+        holdNoteSprite.overrideStepTime = null;
+        holdNoteSprite.overrideData = null;
         holdNoteSprite.noteDirection = noteData.getDirection();
 
         holdNoteSprite.setHeightDirectly(noteLengthPixels);
@@ -3782,6 +3801,15 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
         // TODO: Handle selection of hold notes.
         if (isNoteSelected(noteSprite.noteData))
         {
+          var holdNoteSprite:ChartEditorHoldNoteSprite = null;
+
+          if (noteSprite.noteData != null && noteSprite.noteData.length > 0)
+          {
+            for (holdNote in renderedHoldNotes.members)
+            {
+              if (holdNote.noteData == noteSprite.noteData && holdNoteSprite == null) holdNoteSprite = holdNote;
+            }
+          }
           // Determine if the note is being dragged and offset the vertical position accordingly.
           if (dragTargetCurrentStep != 0.0)
           {
@@ -3790,6 +3818,13 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
             noteSprite.overrideStepTime = (stepTime + dragTargetCurrentStep).clamp(0, songLengthInSteps - (1 * noteSnapRatio));
             // Then reapply the note sprite's position relative to the grid.
             noteSprite.updateNotePosition(renderedNotes);
+
+            // We only need to update the position of the hold note tails as we drag the note.
+            if (holdNoteSprite != null)
+            {
+              holdNoteSprite.overrideStepTime = noteSprite.overrideStepTime;
+              holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
+            }
           }
           else
           {
@@ -3799,6 +3834,12 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
               noteSprite.overrideStepTime = null;
               // Then reapply the note sprite's position relative to the grid.
               noteSprite.updateNotePosition(renderedNotes);
+
+              if (holdNoteSprite != null)
+              {
+                holdNoteSprite.overrideStepTime = null;
+                holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
+              }
             }
           }
 
@@ -3811,6 +3852,13 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
               ChartEditorState.STRUMLINE_SIZE * 2 - 1));
             // Then reapply the note sprite's position relative to the grid.
             noteSprite.updateNotePosition(renderedNotes);
+
+            // We only need to update the position of the hold note tails as we drag the note.
+            if (holdNoteSprite != null)
+            {
+              holdNoteSprite.overrideData = noteSprite.overrideData;
+              holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
+            }
           }
           else
           {
@@ -3820,6 +3868,13 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
               noteSprite.overrideData = null;
               // Then reapply the note sprite's position relative to the grid.
               noteSprite.updateNotePosition(renderedNotes);
+
+              if (holdNoteSprite != null)
+              {
+                holdNoteSprite.overrideData = null;
+                holdNoteSprite.noteDirection = noteSprite.noteData.getDirection();
+                holdNoteSprite.updateHoldNotePosition(renderedHoldNotes);
+              }
             }
           }
 
@@ -6175,6 +6230,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
 
     // Removed this notification because you can see your difficulty in the playbar now.
     // this.success('Switch Difficulty', 'Switched difficulty to ${selectedDifficulty.toTitleCase()}');
+    updateDiscordRPC();
   }
 
   /**
@@ -6404,6 +6460,7 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
       if (event.eventCanceled) continue;
 
       // Hitsounds.
+
       switch (noteData.getStrumlineIndex())
       {
         case 0: // Player
@@ -6411,6 +6468,10 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
           {
             this.playSound(Paths.sound('noteHitSounds/' + Preferences.noteHitSound), hitsoundVolumePlayer);
             lilBf.animation.play("" + noteData.getDirection(), true);
+
+            lilbftime.start(0.7, function(_) {
+              lilBf.animation.play("idle", true);
+            });
           }
 
         case 1: // Opponent
@@ -6418,6 +6479,10 @@ class ChartEditorState extends UIState // UIState derives from MusicBeatState
           {
             this.playSound(Paths.sound('noteHitSounds/' + Preferences.noteHitSoundopp), hitsoundVolumeOpponent);
             lilOpp.animation.play("" + noteData.getDirection(), true);
+
+            lilopptime.start(0.7, function(_) {
+              lilOpp.animation.play("idle", true);
+            });
           }
       }
     }
@@ -6667,4 +6732,9 @@ enum ChartEditorTheme
    * A theme which introduces darker colors.
    */
   Dark;
+
+  /**
+   * A Test Theme.
+   */
+  Lava;
 }

@@ -35,7 +35,7 @@ class FunkinSoundTray extends FlxSoundTray
     bg.scaleX = graphicScale;
     bg.scaleY = graphicScale;
     addChild(bg);
-
+    bg.smoothing = true;
     y = -height;
     visible = false;
 
@@ -45,6 +45,7 @@ class FunkinSoundTray extends FlxSoundTray
     backingBar.y = 5;
     backingBar.scaleX = graphicScale;
     backingBar.scaleY = graphicScale;
+    backingBar.smoothing = true;
     addChild(backingBar);
     backingBar.alpha = 0.4;
 
@@ -61,6 +62,7 @@ class FunkinSoundTray extends FlxSoundTray
       bar.y = 5;
       bar.scaleX = graphicScale;
       bar.scaleY = graphicScale;
+      bar.smoothing = true;
       addChild(bar);
       _bars.push(bar);
     }

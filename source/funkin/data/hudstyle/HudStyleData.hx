@@ -225,6 +225,13 @@ typedef HudStyleData_Healthbar =
   var baroffsets:Array<Float>;
 
   /**
+   * Offset the sprite's Barsprite by this amount.
+   * @default [0, 0]
+   */
+  @:default([0, 0])
+  var barbgoffsets:Array<Float>;
+
+  /**
    * the style of bar. clasic is basic flxbar while psych is psych engines healthbar class.
    * @default clasic
    */

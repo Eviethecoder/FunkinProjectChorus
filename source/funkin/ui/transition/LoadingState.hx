@@ -329,7 +329,10 @@ class LoadingState extends MusicBeatSubState
     FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/good'));
     FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/bad'));
     FunkinSprite.cacheTexture(Paths.image('ui/popup/funkin/shit'));
-
+    FunkinSprite.cacheSparrow('charSelect/bfChill/spritemap1');
+    FunkinSprite.cacheSparrow('charSelect/gfChill/spritemap1');
+    FunkinSprite.cacheSparrow('charSelect/neneChill/spritemap1');
+    FunkinSprite.cacheSparrow('charSelect/picoChill/spritemap1');
     FunkinSprite.cacheTexture(Paths.image('miss', 'shared')); // TODO: remove this
 
     // List all image assets in the level's library.

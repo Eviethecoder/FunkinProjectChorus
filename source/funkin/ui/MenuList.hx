@@ -24,6 +24,9 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
   /** Set to false to disable nav control */
   public var enabled:Bool = true;
 
+  /** read the variable name */
+  public var description:String = ' ooops';
+
   /**  */
   public var wrapMode:WrapMode = Both;
 
@@ -49,11 +52,17 @@ class MenuTypedList<T:MenuListItem> extends FlxTypedGroup<T>
     super();
   }
 
-  public function addItem(name:String, item:T):T
+  public function addItem(name:String, item:T, ?desc:String):T
   {
     if (length == selectedIndex) item.select();
+    this.ID = length;
 
     byName[name] = item;
+    if (desc != null)
+    {
+      description = desc;
+    }
+
     return add(item);
   }
 

@@ -137,8 +137,10 @@ class ChartEditorImportExportHandler
       state.audioInstTrack.stop();
       state.audioInstTrack = null;
     }
+
     state.audioVocalTrackGroup.stop();
     state.audioVocalTrackGroup.clear();
+    state.updateDiscordRPC(); // hackky if it works
   }
 
   /**
@@ -432,7 +434,7 @@ class ChartEditorImportExportHandler
         targetMode = Skip;
         targetPath = Path.join([
           BACKUPS_PATH,
-          'chart-editor-${DateUtil.generateTimestamp()}.${Constants.EXT_CHART}'
+          'chart-editor-${state.currentSongId}-${DateUtil.generateTimestamp()}.${Constants.EXT_CHART}'
         ]);
         // We have to force write because the program will die before the save dialog is closed.
         trace('Force exporting to $targetPath...');

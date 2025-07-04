@@ -8,10 +8,12 @@ import funkin.save.Save;
 import haxe.ui.Toolkit;
 import openfl.display.FPS;
 import openfl.display.Sprite;
+import funkin.Preferences;
 import openfl.events.Event;
 import openfl.Lib;
 import openfl.media.Video;
 import openfl.net.NetStream;
+import funkin.util.AudioSwitchFix;
 
 /**
  * The main class which initializes HaxeFlixel and starts the game in its initial state.
@@ -51,8 +53,6 @@ class Main extends Sprite
     funkin.util.logging.AnsiTrace.traceBF();
 
     // Load mods to override assets.
-    // TODO: Replace with loadEnabledMods() once the user can configure the mod list.
-    funkin.modding.PolymodHandler.loadAllMods();
 
     if (stage != null)
     {
@@ -63,6 +63,9 @@ class Main extends Sprite
       addEventListener(Event.ADDED_TO_STAGE, init);
     }
   }
+
+  public static var audioDisconnected:Bool = false;
+  public static var changeID:Int = 0;
 
   function init(?event:Event):Void
   {
@@ -103,7 +106,11 @@ class Main extends Sprite
 
     // George recommends binding the save before FlxGame is created.
     Save.load();
-    var game:FlxGame = new FlxGame(gameWidth, gameHeight, initialState, framerate, framerate, skipSplash, startFullscreen);
+
+    // TODO: Replace with loadEnabledMods() once the user can configure the mod list.
+    funkin.modding.PolymodHandler.loadEnabledMods();
+
+    var game:FlxGame = new FlxGame(gameWidth, gameHeight, initialState, Preferences.framerate, Preferences.framerate, skipSplash, startFullscreen);
 
     // FlxG.game._customSoundTray wants just the class, it calls new from
     // create() in there, which gets called when it's added to stage
@@ -124,6 +131,8 @@ class Main extends Sprite
     #else
     trace('hxcpp_debug_server is disabled! This build does not support debugging.');
     #end
+
+    AudioSwitchFix.init();
   }
 
   function initHaxeUI():Void

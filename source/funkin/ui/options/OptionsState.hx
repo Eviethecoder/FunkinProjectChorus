@@ -12,13 +12,22 @@ import funkin.ui.MusicBeatState;
 import funkin.graphics.shaders.HSVShader;
 import funkin.util.WindowUtil;
 import funkin.audio.FunkinSound;
+import funkin.play.PlayState;
 import funkin.input.Controls;
+import funkin.play.song.Song;
+import funkin.ui.transition.LoadingState;
 
 class OptionsState extends MusicBeatState
 {
   var pages = new Map<PageName, Page>();
   var currentName:PageName = Options;
   var currentPage(get, never):Page;
+
+  public static var togame:Bool = false;
+  public static var currentSong:Song;
+
+  public static var currentDifficulty:String;
+  public static var currentVariation:String;
 
   inline function get_currentPage():Page
     return pages[currentName];
@@ -39,19 +48,21 @@ class OptionsState extends MusicBeatState
     add(menuBG);
 
     var options = addPage(Options, new OptionsMenu());
+    var colors = addPage(Colors, new ColorsMenu());
     var preferences = addPage(Preferences, new PreferencesMenu());
     var controls = addPage(Controls, new ControlsMenu());
 
     if (options.hasMultipleOptions())
     {
-      options.onExit.add(exitToMainMenu);
+      options.onExit.add(exit);
+      colors.onExit.add(exitColors);
       controls.onExit.add(exitControls);
       preferences.onExit.add(switchPage.bind(Options));
     }
     else
     {
       // No need to show Options page
-      controls.onExit.add(exitToMainMenu);
+      controls.onExit.add(exit);
       setPage(Controls);
     }
 
@@ -108,11 +119,39 @@ class OptionsState extends MusicBeatState
     switchPage(Options);
   }
 
-  function exitToMainMenu()
+  function exitColors():Void
   {
-    currentPage.enabled = false;
-    // TODO: Animate this transition?
-    FlxG.switchState(() -> new MainMenuState());
+    switchPage(Options);
+  }
+
+  function exit()
+  {
+    if (togame == false)
+    {
+      currentPage.enabled = false;
+      // TODO: Animate this transition?
+      FlxG.switchState(() -> new MainMenuState());
+    }
+    else
+    {
+      currentPage.enabled = false;
+      // TODO: Animate this transition?
+      trace(currentSong);
+      LoadingState.loadPlayState(
+        {
+          targetSong: currentSong,
+          targetDifficulty: currentDifficulty,
+          targetVariation: currentVariation,
+          practiceMode: false,
+          minimalMode: false,
+
+          #if (debug || FORCE_DEBUG_VERSION)
+          botPlayMode: FlxG.keys.pressed.SHIFT,
+          #else
+          botPlayMode: false,
+          #end
+        }, true);
+    }
   }
 }
 
@@ -191,6 +230,7 @@ class OptionsMenu extends Page
     add(items = new TextMenuList());
     createItem("PREFERENCES", function() switchPage(Preferences));
     createItem("CONTROLS", function() switchPage(Controls));
+    createItem("COLLORS", function() switchPage(Colors));
     createItem("INPUT OFFSETS", function() {
       FlxG.state.openSubState(new LatencyState());
     });
@@ -201,6 +241,7 @@ class OptionsMenu extends Page
       createItem("LOGIN", selectLogin);
     #end
     createItem("EXIT", exit);
+    updateDiscordRPC();
   }
 
   function createItem(name:String, callback:Void->Void, fireInstantly = false)
@@ -215,6 +256,15 @@ class OptionsMenu extends Page
   {
     items.enabled = value;
     return super.set_enabled(value);
+  }
+
+  function updateDiscordRPC():Void
+  {
+    funkin.api.discord.DiscordClient.instance.setPresence(
+      {
+        state: null,
+        details: 'Changing Options'
+      });
   }
 
   /**

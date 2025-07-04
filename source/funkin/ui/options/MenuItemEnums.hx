@@ -13,6 +13,23 @@ abstract NoteHitSoundType(String) from String to String
 }
 
 @:enum
+abstract Hudstyle(String) from String to String
+{
+  var Funkin;
+  var Test1;
+  var Test2;
+  var Test3;
+}
+
+@:enum
+abstract Rankingtype(String) from String to String
+{
+  var Hard;
+  var Intended;
+  var Pussy;
+}
+
+@:enum
 abstract TimebarType(String) from String to String
 {
   var None;

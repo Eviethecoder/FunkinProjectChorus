@@ -19,9 +19,9 @@ class Save
   public static final SAVE_DATA_VERSION:thx.semver.Version = "2.0.5";
   public static final SAVE_DATA_VERSION_RULE:thx.semver.VersionRule = "2.0.x";
 
-  // We load this version's saves from a new save path, to maintain SOME level of backwards compatibility.
-  static final SAVE_PATH:String = 'FunkinCrew';
-  static final SAVE_NAME:String = 'Funkin';
+  // We load this version's saves from a new save path, to maintain SOME level of backwards compatibility. modified to use its own save path
+  static final SAVE_PATH:String = 'TeamCatastrophe';
+  static final SAVE_NAME:String = 'Chorus';
 
   static final SAVE_PATH_LEGACY:String = 'ninjamuffin99';
   static final SAVE_NAME_LEGACY:String = 'funkin';
@@ -34,6 +34,7 @@ class Save
     if (_instance == null)
     {
       _instance = new Save(FlxG.save.data);
+      trace(_instance);
     }
     return _instance;
   }
@@ -88,10 +89,12 @@ class Save
       options:
         {
           // Reasonable defaults.
+          framerate: 60,
           naughtyness: true,
           downscroll: false,
           middlescroll: false,
           noteHitSound: 'None',
+          rankingtype: 'Intended',
           timebar: 'classic',
           noteHitSoundopp: 'None',
           noteHitSoundVolume: 0,
@@ -102,6 +105,7 @@ class Save
           autoPause: true,
           inputOffset: 0,
           audioVisualOffset: 0,
+          unlockedFramerate: false,
 
           controls:
             {
@@ -124,6 +128,12 @@ class Save
           // No mods enabled.
           enabledMods: [],
           modOptions: [],
+        },
+      unlocks:
+        {
+          // Default to having seen the default character.
+          charactersSeen: ["bf"],
+          oldChar: false
         },
 
       optionsChartEditor:
@@ -398,6 +408,45 @@ class Save
     return data.optionsChartEditor.playbackSpeed;
   }
 
+  public var charactersSeen(get, never):Array<String>;
+
+  function get_charactersSeen():Array<String>
+  {
+    return data.unlocks.charactersSeen;
+  }
+
+  /**
+   * When we've seen a character unlock, add it to the list of characters seen.
+   * @param character
+   */
+  public function addCharacterSeen(character:String):Void
+  {
+    if (!data.unlocks.charactersSeen.contains(character))
+    {
+      trace('Character seen: ' + character);
+      data.unlocks.charactersSeen.push(character);
+      trace('New characters seen list: ' + data.unlocks.charactersSeen);
+      flush();
+    }
+  }
+
+  /**
+   * Marks whether the player has seen the spotlight animation, which should only display once per save file ever.
+   */
+  public var oldChar(get, set):Bool;
+
+  function get_oldChar():Bool
+  {
+    return data.unlocks.oldChar;
+  }
+
+  function set_oldChar(value:Bool):Bool
+  {
+    data.unlocks.oldChar = value;
+    flush();
+    return data.unlocks.oldChar;
+  }
+
   /**
    * Return the score the user achieved for a given level on a given difficulty.
    *
@@ -490,22 +539,34 @@ class Save
    *
    * @param songId The ID of the song.
    * @param difficultyId The difficulty to check.
+   * @param variation The variation to check. Defaults to empty string. Appended to difficulty with `-`, e.g. `easy-pico`.
    * @return A data structure containing score, judgement counts, and accuracy. Returns `null` if no score is saved.
    */
-  public function getSongScore(songId:String, difficultyId:String = 'normal'):Null<SaveScoreData>
+  public function getSongScore(songId:String, difficultyId:String = 'normal', ?variation:String):Null<SaveScoreData>
   {
     var song = data.scores.songs.get(songId);
+    trace('Getting song score for $songId $difficultyId $variation');
     if (song == null)
     {
+      trace('Could not find song data for $songId $difficultyId $variation');
       song = [];
       data.scores.songs.set(songId, song);
     }
+
+    // 'default' variations are left with no suffix ('easy', 'normal', 'hard'),
+    // along with 'erect' variations ('erect', 'nightmare')
+    // otherwise, we want to add a suffix of our current variation to get the save data.
+    if (variation != null && variation != '' && variation != 'default' && variation != 'erect')
+    {
+      difficultyId = '${difficultyId}-${variation}';
+    }
+
     return song.get(difficultyId);
   }
 
-  public function getSongRank(songId:String, difficultyId:String = 'normal'):Null<ScoringRank>
+  public function getSongRank(songId:String, difficultyId:String = 'normal', ?variation:String):Null<ScoringRank>
   {
-    return Scoring.calculateRank(getSongScore(songId, difficultyId));
+    return Scoring.calculateRank(getSongScore(songId, difficultyId, variation));
   }
 
   /**
@@ -857,6 +918,8 @@ typedef RawSaveData =
 
   var api:SaveApiData;
 
+  var unlocks:SaveDataUnlocks;
+
   /**
    * The user's saved scores.
    */
@@ -958,12 +1021,39 @@ typedef SaveScoreTallyData =
   var totalNotes:Int;
 }
 
+typedef SaveDataUnlocks =
+{
+  /**
+   * Every time we see the unlock animation for a character,
+   * add it to this list so that we don't show it again.
+   */
+  var charactersSeen:Array<String>;
+
+  /**
+   * This is a conditional when the player enters the character state
+   * For the first time ever
+   */
+  var oldChar:Bool;
+}
+
 /**
  * An anonymous structure containing all the user's options and preferences for the main game.
  * Every time you add a new option, it needs to be added here.
  */
 typedef SaveDataOptions =
 {
+  /**
+   * FPS
+   * @default `60`
+   */
+  var framerate:Int;
+
+  /**
+   * If we want the framerate to be unlocked on HTML5.
+   * @default `false`
+   */
+  var unlockedFramerate:Bool;
+
   /**
    * Whether some particularly fowl language is displayed.
    * @default `true`
@@ -975,6 +1065,12 @@ typedef SaveDataOptions =
    * @default `None`
    */
   var noteHitSound:String;
+
+  /**
+   * What hitsound plays, ddefault is none
+   * @default `None`
+   */
+  var rankingtype:String;
 
   /**
    * The Timebar Type.

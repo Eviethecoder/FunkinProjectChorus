@@ -11,6 +11,7 @@ import flixel.math.FlxRect;
 import flixel.system.debug.log.LogStyle;
 import funkin.play.notes.notekind.NoteKindManager;
 import flixel.util.FlxColor;
+import funkin.data.freeplay.player.PlayerRegistry;
 import funkin.data.dialogue.conversation.ConversationRegistry;
 import funkin.data.dialogue.dialoguebox.DialogueBoxRegistry;
 import funkin.data.dialogue.speaker.SpeakerRegistry;
@@ -35,7 +36,7 @@ import funkin.util.WindowUtil;
 import funkin.util.macro.MacroUtil;
 import lime.app.Application;
 import openfl.display.BitmapData;
-import funkin.api.discord.Discord.DiscordClient;
+import funkin.api.discord.DiscordClient;
 
 /**
  * A core class which performs initialization of the game.
@@ -80,6 +81,12 @@ class InitState extends FlxState
     // Disable the thing on Windows where it tries to send a bug report to Microsoft because why do they care?
     WindowUtil.disableCrashHandler();
 
+    // Disable the lime/openfl log crashing the game and redirect the error printing.
+    lime.utils.Log.throwErrors = false;
+    lime.utils.Log.onError.add(function(error:String) {
+      lime.app.Application.current.window.alert(error, "Assets Error!");
+    });
+
     // This ain't a pixel art game! (most of the time)
     FlxSprite.defaultAntialiasing = true;
 
@@ -123,10 +130,10 @@ class InitState extends FlxState
     // DISCORD API SETUP
     //
 
-    DiscordClient.initialize();
+    DiscordClient.instance.init();
 
-    Application.current.onExit.add(function(exitCode) {
-      DiscordClient.shutdown();
+    lime.app.Application.current.onExit.add(function(exitCode) {
+      DiscordClient.instance.shutdown();
     });
 
     //
@@ -165,6 +172,7 @@ class InitState extends FlxState
     LevelRegistry.instance.loadEntries();
     NoteStyleRegistry.instance.loadEntries();
     HudStyleRegistry.instance.loadEntries();
+    PlayerRegistry.instance.loadEntries();
     ConversationRegistry.instance.loadEntries();
     DialogueBoxRegistry.instance.loadEntries();
     SpeakerRegistry.instance.loadEntries();

@@ -330,11 +330,18 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
     target.frames = atlas;
 
     target.antialiasing = !_data.assets.noteSplash.isPixel;
-    target.scale.set(_data.assets.noteSplash.scale, _data.assets.noteSplash.scale);
     target.updateHitbox();
 
     // Apply the animations.
     buildNoteSplashAnimations(target);
+    target.splashFramerate = getSplashFramerate();
+    target.splashFramerateVariance = getSplashFramerateVariance();
+    target.alpha = _data.assets.noteSplash?.alpha ?? 1.0;
+    target.blend = _data.assets.noteSplash?.data?.blendMode ?? "normal";
+
+    var scale = getSplashScale();
+    target.scale.set(scale, scale);
+    target.updateHitbox();
   }
 
   var noteSplashFrames:FlxAtlasFrames = null;
@@ -382,6 +389,21 @@ class NoteStyle implements IRegistryEntry<NoteStyleData>
     var parts = getNoteSplashAssetPath(true).split(Constants.LIBRARY_SEPARATOR);
     if (parts.length == 1) return null;
     return parts[0];
+  }
+
+  public function getSplashFramerate():Int
+  {
+    return _data?.assets?.noteSplash?.data?.framerateDefault ?? fallback?.getSplashFramerate() ?? 24;
+  }
+
+  public function getSplashScale():Float
+  {
+    return _data?.assets?.noteSplash?.scale ?? fallback?.getSplashScale() ?? 1.0;
+  }
+
+  public function getSplashFramerateVariance():Int
+  {
+    return _data?.assets?.noteSplash?.data?.framerateVariance ?? fallback?.getSplashFramerateVariance() ?? 2;
   }
 
   function buildNoteSplashAnimations(target:NoteSplash):Void

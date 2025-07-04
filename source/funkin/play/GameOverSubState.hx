@@ -282,12 +282,9 @@ class GameOverSubState extends MusicBeatSubState
       }
       else
       {
-        // Music hasn't started yet.
-        switch (PlayStatePlaylist.campaignId)
+        switch (PlayState.instance.deathenabled)
         {
-          // TODO: Make the behavior for playing Jeff's voicelines generic or un-hardcoded.
-          // This will simplify the class and make it easier for mods to add death quotes.
-          case 'week7':
+          case true:
             if (boyfriend.getCurrentAnimation().startsWith('firstDeath') && boyfriend.isAnimationFinished() && !playingJeffQuote)
             {
               playingJeffQuote = true;
@@ -296,7 +293,8 @@ class GameOverSubState extends MusicBeatSubState
               startDeathMusic(0.2, false);
               boyfriend.playAnimation('deathLoop' + animationSuffix);
             }
-          default:
+
+          case false:
             // Start music at normal volume once the initial death animation finishes.
             if (boyfriend.getCurrentAnimation().startsWith('firstDeath') && boyfriend.isAnimationFinished())
             {
@@ -463,13 +461,20 @@ class GameOverSubState extends MusicBeatSubState
 
     if (!Preferences.naughtyness) randomCensor = [1, 3, 8, 13, 17, 21];
 
-    FunkinSound.playOnce(Paths.sound('jeffGameover/jeffGameover-' + FlxG.random.int(1, 25, randomCensor)), function() {
-      // Once the quote ends, fade in the game over music.
-      if (!isEnding && gameOverMusic != null)
-      {
-        gameOverMusic.fadeIn(4, 0.2, 1);
-      }
-    });
+    if (PlayState.instance.Deathstring == '') {}
+
+    var deathline:String = PlayState.instance.Deathstring;
+
+    trace('$deathline/$deathline-' + FlxG.random.int(1, Std.parseInt(PlayState.instance.currentChart.death), randomCensor));
+
+    FunkinSound.playOnce(Paths.sound('$deathline/$deathline-' + FlxG.random.int(1, Std.parseInt(PlayState.instance.currentChart.death), randomCensor)),
+      function() {
+        // Once the quote ends, fade in the game over music.
+        if (!isEnding && gameOverMusic != null)
+        {
+          gameOverMusic.fadeIn(4, 0.2, 1);
+        }
+      });
   }
 
   public override function destroy():Void

@@ -26,6 +26,31 @@ class Preferences
     return value;
   }
 
+  public static var framerate(get, set):Int;
+
+  static function get_framerate():Int
+  {
+    #if web
+    return 60;
+    #else
+    return Save?.instance?.options?.framerate ?? 60;
+    #end
+  }
+
+  static function set_framerate(value:Int):Int
+  {
+    #if web
+    return 60;
+    #else
+    var save:Save = Save.instance;
+    save.options.framerate = value;
+    save.flush();
+    FlxG.updateFramerate = value;
+    FlxG.drawFramerate = value;
+    return value;
+    #end
+  }
+
   /**
    * if you want notehit sounds during gameplay .
    * @default `false`
@@ -41,6 +66,25 @@ class Preferences
   {
     var save:Save = Save.instance;
     save.options.noteHitSound = value;
+    save.flush();
+    return value;
+  }
+
+  /**
+   * if you want notehit sounds during gameplay .
+   * @default `Intended`
+   */
+  public static var rankingtype(get, set):String;
+
+  static function get_rankingtype():String
+  {
+    return Save?.instance?.options?.rankingtype;
+  }
+
+  static function set_rankingtype(value:String):String
+  {
+    var save:Save = Save.instance;
+    save.options.rankingtype = value;
     save.flush();
     return value;
   }

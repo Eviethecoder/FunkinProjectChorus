@@ -75,6 +75,11 @@ class Strumline extends FlxSpriteGroup
   }
 
   /**
+   * Whether the game should auto position notes.
+   */
+  public var customPositionData:Bool = false;
+
+  /**
    * The notes currently being rendered on the strumline.
    * This group iterates over this every frame to update note positions.
    * The PlayState also iterates over this to calculate user inputs.
@@ -115,7 +120,16 @@ class Strumline extends FlxSpriteGroup
     this.noteStyle = noteStyle;
 
     this.strumlineNotes = new FlxTypedSpriteGroup<StrumlineNote>();
-    this.strumlineNotes.zIndex = 10;
+    trace(noteStyle.isHoldNoteCoverEnabled());
+    if (noteStyle.isHoldNoteCoverEnabled() == true)
+    {
+      trace('ten');
+      this.strumlineNotes.zIndex = 10;
+    }
+    else
+    {
+      this.strumlineNotes.zIndex = 22;
+    }
     this.add(this.strumlineNotes);
 
     // Hold notes are added first so they render behind regular notes.
@@ -362,11 +376,13 @@ class Strumline extends FlxSpriteGroup
 
       var vwoosh:Bool = note.holdNoteSprite == null;
       // Set the note's position. modcharting requires constant updating like the y axis. your stupid kuru for taking a day for this - past kuru
-      note.y = this.y - INITIAL_OFFSET + calculateNoteYPos(note.strumTime, vwoosh);
-      note.x = strumlineNotes.members[note.direction].x;
+
+      if (!customPositionData) note.y = this.y - INITIAL_OFFSET + calculateNoteYPos(note.strumTime, vwoosh);
+      if (!customPositionData) note.x = strumlineNotes.members[note.direction].x;
 
       // If the note is miss
       var isOffscreen = Preferences.downscroll ? note.y > FlxG.height : note.y < -note.height;
+
       if (note.handledMiss && isOffscreen)
       {
         killNote(note);
@@ -434,16 +450,18 @@ class Strumline extends FlxSpriteGroup
 
         var vwoosh:Bool = false;
 
-        if (Preferences.downscroll)
+        if (!customPositionData)
         {
-          holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) - holdNote.height + STRUMLINE_SIZE / 2;
+          if (Preferences.downscroll)
+          {
+            holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) - holdNote.height + STRUMLINE_SIZE / 2;
+          }
+          else
+          {
+            holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) + yOffset + STRUMLINE_SIZE / 2;
+          }
+          holdNote.x = strumlineNotes.members[holdNote.noteDirection].x + 40;
         }
-        else
-        {
-          holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) + yOffset + STRUMLINE_SIZE / 2;
-        }
-
-        holdNote.x = strumlineNotes.members[holdNote.noteDirection].x + 40;
 
         // Clean up the cover.
         if (holdNote.cover != null)
@@ -465,13 +483,16 @@ class Strumline extends FlxSpriteGroup
           holdNote.visible = false;
         }
 
-        if (Preferences.downscroll)
+        if (!customPositionData)
         {
-          holdNote.y = this.y - INITIAL_OFFSET - holdNote.height + STRUMLINE_SIZE / 2;
-        }
-        else
-        {
-          holdNote.y = this.y - INITIAL_OFFSET + STRUMLINE_SIZE / 2;
+          if (Preferences.downscroll)
+          {
+            holdNote.y = this.y - INITIAL_OFFSET - holdNote.height + STRUMLINE_SIZE / 2;
+          }
+          else
+          {
+            holdNote.y = this.y - INITIAL_OFFSET + STRUMLINE_SIZE / 2;
+          }
         }
       }
       else
@@ -480,13 +501,16 @@ class Strumline extends FlxSpriteGroup
         holdNote.visible = true;
         var vwoosh:Bool = false;
 
-        if (Preferences.downscroll)
+        if (!customPositionData)
         {
-          holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) - holdNote.height + STRUMLINE_SIZE / 2;
-        }
-        else
-        {
-          holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) + STRUMLINE_SIZE / 2;
+          if (Preferences.downscroll)
+          {
+            holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) - holdNote.height + STRUMLINE_SIZE / 2;
+          }
+          else
+          {
+            holdNote.y = this.y - INITIAL_OFFSET + calculateNoteYPos(holdNote.strumTime, vwoosh) + STRUMLINE_SIZE / 2;
+          }
         }
       }
     }

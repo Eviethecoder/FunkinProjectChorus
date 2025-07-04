@@ -86,6 +86,11 @@ class SustainTrail extends FlxSprite
    */
   public var bottomClip:Float = 0.9;
 
+  /**
+   * Whether the note will recieve custom vertex data
+   */
+  public var customVertexData:Bool = false;
+
   public var isPixel:Bool;
 
   /**
@@ -137,9 +142,65 @@ class SustainTrail extends FlxSprite
     updateColorTransform();
 
     updateClipping();
-    indices = new DrawData<Int>(12, true, TRIANGLE_VERTEX_INDICES);
-
+    setIndices(TRIANGLE_VERTEX_INDICES);
     this.active = true; // This NEEDS to be true for the note to be drawn!
+  }
+
+  /**
+   * Sets the indices for the triangles.
+   * @param indices The indices to set.
+   */
+  public function setIndices(indices:Array<Int>):Void
+  {
+    if (this.indices.length == indices.length)
+    {
+      for (i in 0...indices.length)
+      {
+        this.indices[i] = indices[i];
+      }
+    }
+    else
+    {
+      this.indices = new DrawData<Int>(indices.length, false, indices);
+    }
+  }
+
+  /**
+   * Sets the vertices for the triangles.
+   * @param vertices The vertices to set.
+   */
+  public function setVertices(vertices:Array<Float>):Void
+  {
+    if (this.vertices.length == vertices.length)
+    {
+      for (i in 0...vertices.length)
+      {
+        this.vertices[i] = vertices[i];
+      }
+    }
+    else
+    {
+      this.vertices = new DrawData<Float>(vertices.length, false, vertices);
+    }
+  }
+
+  /**
+   * Sets the UV data for the triangles.
+   * @param uvtData The UV data to set.
+   */
+  public function setUVTData(uvtData:Array<Float>):Void
+  {
+    if (this.uvtData.length == uvtData.length)
+    {
+      for (i in 0...uvtData.length)
+      {
+        this.uvtData[i] = uvtData[i];
+      }
+    }
+    else
+    {
+      this.uvtData = new DrawData<Float>(uvtData.length, false, uvtData);
+    }
   }
 
   override function getScreenPosition(?result:flixel.math.FlxPoint, ?camera:flixel.FlxCamera):flixel.math.FlxPoint
@@ -221,33 +282,37 @@ class SustainTrail extends FlxSprite
       visible = true;
     }
 
+    /**
+     * no idea why these used fucking math for the array. but changed to their corect numbers for modcharting...eventualy
+     */
+
     var bottomHeight:Float = graphic.height * zoom * endOffset;
     var partHeight:Float = clipHeight - bottomHeight;
 
     // ===HOLD VERTICES==
     // Top left
-    vertices[0 * 2] = 0.0; // Inline with left side
-    vertices[0 * 2 + 1] = flipY ? clipHeight : graphicHeight - clipHeight;
+    vertices[0] = 0.0; // Inline with left side
+    vertices[1] = flipY ? clipHeight : graphicHeight - clipHeight;
 
     // Top right
-    vertices[1 * 2] = graphicWidth;
-    vertices[1 * 2 + 1] = vertices[0 * 2 + 1]; // Inline with top left vertex
+    vertices[2] = graphicWidth;
+    vertices[3] = vertices[1]; // Inline with top left vertex
 
     // Bottom left
-    vertices[2 * 2] = 0.0; // Inline with left side
-    vertices[2 * 2 + 1] = if (partHeight > 0)
+    vertices[4] = 0.0; // Inline with left side
+    vertices[5] = if (partHeight > 0)
     {
       // flipY makes the sustain render upside down.
       flipY ? 0.0 + bottomHeight : vertices[1] + partHeight;
     }
     else
     {
-      vertices[0 * 2 + 1]; // Inline with top left vertex (no partHeight available)
+      vertices[1]; // Inline with top left vertex (no partHeight available)
     }
 
     // Bottom right
-    vertices[3 * 2] = graphicWidth;
-    vertices[3 * 2 + 1] = vertices[2 * 2 + 1]; // Inline with bottom left vertex
+    vertices[6] = graphicWidth;
+    vertices[7] = vertices[5]; // Inline with bottom left vertex
 
     // ===HOLD UVs===
 
@@ -255,43 +320,43 @@ class SustainTrail extends FlxSprite
     // UV coordinates are normalized, so they range from 0 to 1.
     // We are expecting an image containing 8 horizontal segments, each representing a different colored hold note followed by its end cap.
 
-    uvtData[0 * 2] = 1 / 4 * (noteDirection % 4); // 0%/25%/50%/75% of the way through the image
-    uvtData[0 * 2 + 1] = (-partHeight) / graphic.height / zoom; // top bound
+    uvtData[0] = 1 / 4 * (noteDirection % 4); // 0%/25%/50%/75% of the way through the image
+    uvtData[1] = (-partHeight) / graphic.height / zoom; // top bound
     // Top left
 
     // Top right
-    uvtData[1 * 2] = uvtData[0 * 2] + 1 / 8; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left)
-    uvtData[1 * 2 + 1] = uvtData[0 * 2 + 1]; // top bound
+    uvtData[2] = uvtData[0] + 1 / 8; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left)
+    uvtData[3] = uvtData[1]; // top bound
 
     // Bottom left
-    uvtData[2 * 2] = uvtData[0 * 2]; // 0%/25%/50%/75% of the way through the image
-    uvtData[2 * 2 + 1] = 0.0; // bottom bound
+    uvtData[4] = uvtData[0]; // 0%/25%/50%/75% of the way through the image
+    uvtData[5] = 0.0; // bottom bound
 
     // Bottom right
-    uvtData[3 * 2] = uvtData[1 * 2]; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left)
-    uvtData[3 * 2 + 1] = uvtData[2 * 2 + 1]; // bottom bound
+    uvtData[6] = uvtData[2]; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left)
+    uvtData[7] = uvtData[5]; // bottom bound
 
     // === END CAP VERTICES ===
     // Top left
-    vertices[4 * 2] = vertices[2 * 2]; // Inline with bottom left vertex of hold
-    vertices[4 * 2 + 1] = vertices[2 * 2 + 1]; // Inline with bottom left vertex of hold
+    vertices[8] = vertices[4]; // Inline with bottom left vertex of hold
+    vertices[9] = vertices[5]; // Inline with bottom left vertex of hold
 
     // Top right
-    vertices[5 * 2] = vertices[3 * 2]; // Inline with bottom right vertex of hold
-    vertices[5 * 2 + 1] = vertices[3 * 2 + 1]; // Inline with bottom right vertex of hold
+    vertices[10] = vertices[6]; // Inline with bottom right vertex of hold
+    vertices[11] = vertices[7]; // Inline with bottom right vertex of hold
 
     // Bottom left
-    vertices[6 * 2] = vertices[2 * 2]; // Inline with left side
-    vertices[6 * 2 + 1] = flipY ? (graphic.height * (-bottomClip + endOffset) * zoom) : (graphicHeight + graphic.height * (bottomClip - endOffset) * zoom);
+    vertices[12] = vertices[4]; // Inline with left side
+    vertices[13] = flipY ? (graphic.height * (-bottomClip + endOffset) * zoom) : (graphicHeight + graphic.height * (bottomClip - endOffset) * zoom);
 
     // Bottom right
-    vertices[7 * 2] = vertices[3 * 2]; // Inline with right side
-    vertices[7 * 2 + 1] = vertices[6 * 2 + 1]; // Inline with bottom of end cap
+    vertices[14] = vertices[6]; // Inline with right side
+    vertices[15] = vertices[12 + 1]; // Inline with bottom of end cap
 
     // === END CAP UVs ===
     // Top left
-    uvtData[4 * 2] = uvtData[2 * 2] + 1 / 8; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left of hold)
-    uvtData[4 * 2 + 1] = if (partHeight > 0)
+    uvtData[8] = uvtData[4] + 1 / 8; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left of hold)
+    uvtData[9] = if (partHeight > 0)
     {
       0;
     }
@@ -301,16 +366,16 @@ class SustainTrail extends FlxSprite
     };
 
     // Top right
-    uvtData[5 * 2] = uvtData[4 * 2] + 1 / 8; // 25%/50%/75%/100% of the way through the image (1/8th past the top left of cap)
-    uvtData[5 * 2 + 1] = uvtData[4 * 2 + 1]; // top bound
+    uvtData[10] = uvtData[8] + 1 / 8; // 25%/50%/75%/100% of the way through the image (1/8th past the top left of cap)
+    uvtData[11] = uvtData[9]; // top bound
 
     // Bottom left
-    uvtData[6 * 2] = uvtData[4 * 2]; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left of hold)
-    uvtData[6 * 2 + 1] = bottomClip; // bottom bound
+    uvtData[12] = uvtData[8]; // 12.5%/37.5%/62.5%/87.5% of the way through the image (1/8th past the top left of hold)
+    uvtData[13] = bottomClip; // bottom bound
 
     // Bottom right
-    uvtData[7 * 2] = uvtData[5 * 2]; // 25%/50%/75%/100% of the way through the image (1/8th past the top left of cap)
-    uvtData[7 * 2 + 1] = uvtData[6 * 2 + 1]; // bottom bound
+    uvtData[14] = uvtData[10]; // 25%/50%/75%/100% of the way through the image (1/8th past the top left of cap)
+    uvtData[15] = uvtData[13]; // bottom bound
   }
 
   @:access(flixel.FlxCamera)
@@ -324,7 +389,7 @@ class SustainTrail extends FlxSprite
       // if (!isOnScreen(camera)) continue; // TODO: Update this code to make it work properly.
 
       getScreenPosition(_point, camera).subtractPoint(offset);
-      camera.drawTriangles(processedGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing);
+      camera.drawTriangles(processedGraphic, vertices, indices, uvtData, null, _point, blend, true, antialiasing, colorTransform, shader);
     }
 
     #if FLX_DEBUG

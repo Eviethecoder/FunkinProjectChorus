@@ -228,10 +228,18 @@ class PolymodHandler
   static function buildImports():Void
   {
     // Add default imports for common classes.
+    Polymod.addDefaultImport(funkin.Assets);
+    Polymod.addDefaultImport(funkin.Paths);
 
     // Add import aliases for certain classes.
     // NOTE: Scripted classes are automatically aliased to their parent class.
     Polymod.addImportAlias('flixel.math.FlxPoint', flixel.math.FlxPoint.FlxBasePoint);
+
+    Polymod.addImportAlias('funkin.data.event.SongEventSchema', funkin.data.event.SongEventSchema.SongEventSchemaRaw);
+
+    // `lime.utils.Assets` literally just has a private `resolveClass` function for some reason? so we replace it with our own.
+    Polymod.addImportAlias('lime.utils.Assets', funkin.Assets);
+    Polymod.addImportAlias('openfl.utils.Assets', funkin.Assets);
 
     // Add blacklisting for prohibited classes and packages.
 
@@ -251,8 +259,36 @@ class PolymodHandler
     // Lib.load() can load malicious DLLs
     Polymod.blacklistImport('cpp.Lib');
 
+    // `Unserializer`
+    // Unserializer.DEFAULT_RESOLVER.resolveClass() can access blacklisted packages
+    Polymod.blacklistImport('Unserializer');
+
+    // `lime.system.CFFI`
+    // Can load and execute compiled binaries.
+    Polymod.blacklistImport('lime.system.CFFI');
+
+    // `lime.system.JNI`
+    // Can load and execute compiled binaries.
+    Polymod.blacklistImport('lime.system.JNI');
+
+    // `lime.system.System`
+    // System.load() can load malicious DLLs
+    Polymod.blacklistImport('lime.system.System');
+
+    // `lime.utils.Assets`
+    // Literally just has a private `resolveClass` function for some reason?
+    Polymod.blacklistImport('lime.utils.Assets');
+    Polymod.blacklistImport('openfl.utils.Assets');
+    Polymod.blacklistImport('openfl.Lib');
+    Polymod.blacklistImport('openfl.system.ApplicationDomain');
+    Polymod.blacklistImport('funkin.util.FunkinTypeResolver');
+
+    // `openfl.desktop.NativeProcess`
+    // Can load native processes on the host operating system.
+    Polymod.blacklistImport('openfl.desktop.NativeProcess');
+
     // `polymod.*`
-    // You can probably unblacklist a module
+    // Contains functions which may allow for un-blacklisting other modules.
     for (cls in ClassMacro.listClassesInPackage('polymod'))
     {
       if (cls == null) continue;
@@ -261,6 +297,7 @@ class PolymodHandler
     }
 
     // `sys.*`
+    // Access to system utilities such as the file system.
     for (cls in ClassMacro.listClassesInPackage('sys'))
     {
       if (cls == null) continue;
@@ -289,8 +326,19 @@ class PolymodHandler
   {
     return {
       assetLibraryPaths: [
-        'default' => 'preload', 'shared' => 'shared', 'songs' => 'songs', 'videos' => 'videos', 'tutorial' => 'tutorial', 'week1' => 'week1',
-        'week2' => 'week2', 'week3' => 'week3', 'week4' => 'week4', 'week5' => 'week5', 'week6' => 'week6', 'week7' => 'week7', 'weekend1' => 'weekend1',
+        'default' => 'preload',
+        'shared' => 'shared',
+        'songs' => 'songs',
+        'videos' => 'videos',
+        'tutorial' => 'tutorial',
+        'week1' => 'week1',
+        'week2' => 'week2',
+        'week3' => 'week3',
+        'week4' => 'week4',
+        'week5' => 'week5',
+        'week6' => 'week6',
+        'week7' => 'week7',
+        'weekend1' => 'weekend1',
       ],
       coreAssetRedirect: CORE_FOLDER,
     }
@@ -346,6 +394,41 @@ class PolymodHandler
     return enabledMods;
   }
 
+  public static function forceReloadAssetsmodmenureset():Void
+  {
+    // Forcibly clear scripts so that scripts can be edited.
+    ModuleHandler.clearModuleCache();
+    Polymod.clearScripts();
+
+    // Forcibly reload Polymod so it finds any new files.
+    // TODO: Replace this with loadEnabledMods().
+    PolymodHandler.loadEnabledMods();
+
+    // Reload scripted classes so stages and modules will update.
+    Polymod.registerAllScriptClasses();
+
+    // Reload everything that is cached.
+    // Currently this freezes the game for a second but I guess that's tolerable?
+
+    // TODO: Reload event callbacks
+
+    // These MUST be imported at the top of the file and not referred to by fully qualified name,
+    // to ensure build macros work properly.
+    SongRegistry.instance.loadEntries();
+    LevelRegistry.instance.loadEntries();
+    NoteStyleRegistry.instance.loadEntries();
+    SongEventRegistry.loadEventCache();
+    ConversationRegistry.instance.loadEntries();
+    DialogueBoxRegistry.instance.loadEntries();
+    SpeakerRegistry.instance.loadEntries();
+    AlbumRegistry.instance.loadEntries();
+    StageRegistry.instance.loadEntries();
+    CharacterDataParser.loadCharacterCache(); // TODO: Migrate characters to BaseRegistry.
+    NoteKindManager.loadScripts();
+    ModuleHandler.loadModuleCache();
+    FlxG.switchState(() -> new funkin.ui.mainmenu.MainMenuState());
+  }
+
   /**
    * Clear and reload from disk all data assets.
    * Useful for "hot reloading" for fast iteration!
@@ -358,7 +441,7 @@ class PolymodHandler
 
     // Forcibly reload Polymod so it finds any new files.
     // TODO: Replace this with loadEnabledMods().
-    funkin.modding.PolymodHandler.loadAllMods();
+    funkin.modding.PolymodHandler.loadEnabledMods();
 
     // Reload scripted classes so stages and modules will update.
     Polymod.registerAllScriptClasses();

@@ -10,19 +10,22 @@ class TextMenuList extends MenuTypedList<TextMenuItem>
     super(navControls, wrapMode);
   }
 
-  public function createItem(x = 0.0, y = 0.0, name:String, font:AtlasFont = BOLD, ?callback:Void->Void, fireInstantly = false)
+  public function createItem(x = 0.0, y = 0.0, name:String, font:AtlasFont = BOLD, ?callback:Void->Void, ?desc:String, fireInstantly = false,)
   {
     var item = new TextMenuItem(x, y, name, font, callback);
     item.fireInstantly = fireInstantly;
-    return addItem(name, item);
+    return addItem(name, item, desc);
   }
 }
 
 class TextMenuItem extends TextTypedMenuItem<AtlasText>
 {
-  public function new(x = 0.0, y = 0.0, name:String, font:AtlasFont = BOLD, ?callback:Void->Void)
+  public var description:String;
+
+  public function new(x = 0.0, y = 0.0, name:String, font:AtlasFont = BOLD, ?callback:Void->Void, ?desc:String)
   {
     super(x, y, new AtlasText(0, 0, name, font), name, callback);
+    description = desc;
     setEmptyBackground();
   }
 }

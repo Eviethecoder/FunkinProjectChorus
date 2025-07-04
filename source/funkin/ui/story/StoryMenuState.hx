@@ -24,7 +24,7 @@ import funkin.ui.transition.LoadingState;
 import funkin.ui.transition.StickerSubState;
 import funkin.util.MathUtil;
 import openfl.utils.Assets;
-import funkin.api.discord.Discord.DiscordClient;
+import funkin.api.discord.DiscordClient;
 
 class StoryMenuState extends MusicBeatState
 {
@@ -218,7 +218,7 @@ class StoryMenuState extends MusicBeatState
     refresh();
 
     // Updating Discord Rich Presence
-    DiscordClient.changePresence('In the Menus', null);
+    DiscordClient.instance.setPresence({state: 'Choosing A Story', details: null});
   }
 
   function rememberSelection():Void

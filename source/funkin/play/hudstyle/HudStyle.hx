@@ -160,6 +160,11 @@ class HudStyle implements IRegistryEntry<HudStyleData>
     return _data.assets?.healthbar?.animated ?? false;
   }
 
+  public function istimebarAnimated():Bool
+  {
+    return _data.assets?.timebar?.animated ?? false;
+  }
+
   public function getHealthbarScale():Float
   {
     return _data.assets?.healthbar?.scale ?? 1.0;
@@ -168,6 +173,11 @@ class HudStyle implements IRegistryEntry<HudStyleData>
   public function getHealthbarbarOffsets():Array<Float>
   {
     return _data.assets.healthbar.data.baroffsets ?? [0, 0];
+  }
+
+  public function getHealthbarbarbgOffsets():Array<Float>
+  {
+    return _data.assets.healthbar.data.barbgoffsets ?? [0, 0];
   }
 
   public function getHealthbarspriteOffsets():Array<Float>

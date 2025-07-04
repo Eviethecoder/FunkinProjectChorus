@@ -83,14 +83,21 @@ class BarStuff extends FlxTypedGroup<FlxBasic>
       FlxColor.fromRGB(boyfriend[0], boyfriend[1], boyfriend[2])
     ];
 
-    var healthBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
-    healthBarBG = FunkinSprite.create(0, healthBarYPos, hudstyle.getHealthbarAssetPath());
-    healthBarBG.screenCenter(X);
-    healthBarBG.scrollFactor.set(0, 0);
-    healthBarBG.zIndex = 801;
-
     var healthoffsets = hudstyle.getHealthbarbarOffsets();
     var healthspriteoffsets = hudstyle.getHealthbarspriteOffsets();
+    var baroffsets = hudstyle.getHealthbarbarbgOffsets();
+    var healthbaranimated = hudstyle.isHealthbarAnimated();
+
+    var healthBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
+    healthBarBG = FunkinSprite.create(0 + baroffsets[0], healthBarYPos + baroffsets[1], hudstyle.getHealthbarAssetPath());
+    healthBarBG.screenCenter(X);
+    healthBarBG.scrollFactor.set(0, 0);
+    if (healthbaranimated == true)
+    {
+      healthBarBG.frames = Paths.getSparrowAtlas(hudstyle.getHealthbarAssetPath());
+      healthBarBG.animation.addByPrefix('idle', 'idle', 24, true);
+    }
+    healthBarBG.zIndex = 801;
 
     healthBar = new FlxBar(healthBarBG.x + healthspriteoffsets[0], healthBarBG.y + healthspriteoffsets[1], RIGHT_TO_LEFT,
       Std.int(healthBarBG.width + healthoffsets[0]), Std.int(healthBarBG.height + healthoffsets[1]), this, null, 0, 2);
@@ -98,6 +105,10 @@ class BarStuff extends FlxTypedGroup<FlxBasic>
     healthBar.scrollFactor.set();
     healthBar.createFilledBar(FlxColor.fromRGB(dad[0], dad[1], dad[2]), FlxColor.fromRGB(boyfriend[0], boyfriend[1], boyfriend[2]));
     healthBar.zIndex = 800;
+    // One division for each pixel of the bar's width ensures maximum bar smoothness.
+    // This is better looking, and syncs with the lerped icon movement better.
+    // This can be slightly more heavy on the CPU, though, so if lower end device performance options are added, maybe make them affect this?
+    healthBar.numDivisions = Std.int(healthBarBG.width - 8);
     add(healthBar);
     add(healthBarBG);
 
@@ -138,6 +149,95 @@ class BarStuff extends FlxTypedGroup<FlxBasic>
       timeTxt.text = 'unset';
       timeTxt.zIndex = 810;
       add(timeTxt);
+    }
+  }
+
+  public function barrecreation(dad:Array<Int>, boyfriend:Array<Int>, newhudstyle:HudStyle)
+  {
+    var emptyarray:Array<FlxColor> = [FlxColor.BLACK, FlxColor.BLACK];
+    var fullyarray:Array<FlxColor> = [
+      FlxColor.fromRGB(dad[0], dad[1], dad[2]),
+      FlxColor.fromRGB(boyfriend[0], boyfriend[1], boyfriend[2])
+    ];
+
+    var healthoffsets = newhudstyle.getHealthbarbarOffsets();
+    var healthspriteoffsets = newhudstyle.getHealthbarspriteOffsets();
+
+    var healthbaranimated = newhudstyle.isHealthbarAnimated();
+
+    var healthBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.1 : FlxG.height * 0.9;
+    healthBarBG = FunkinSprite.create(0, healthBarYPos, newhudstyle.getHealthbarAssetPath());
+    healthBarBG.screenCenter(X);
+    healthBarBG.scrollFactor.set(0, 0);
+    if (healthbaranimated == true)
+    {
+      healthBarBG.frames = Paths.getSparrowAtlas(hudstyle.getHealthbarAssetPath());
+      healthBarBG.animation.addByPrefix('idle', 'idle', 24, true);
+    }
+    healthBarBG.zIndex = 801;
+
+    healthBar = new FlxBar(healthBarBG.x + healthspriteoffsets[0], healthBarBG.y + healthspriteoffsets[1], RIGHT_TO_LEFT,
+      Std.int(healthBarBG.width + healthoffsets[0]), Std.int(healthBarBG.height + healthoffsets[1]), this, null, 0, 2);
+    healthBar.value = PlayState.instance.healthLerp;
+    healthBar.scrollFactor.set();
+    healthBar.createFilledBar(FlxColor.fromRGB(dad[0], dad[1], dad[2]), FlxColor.fromRGB(boyfriend[0], boyfriend[1], boyfriend[2]));
+    healthBar.zIndex = 800;
+    // One division for each pixel of the bar's width ensures maximum bar smoothness.
+    // This is better looking, and syncs with the lerped icon movement better.
+    // This can be slightly more heavy on the CPU, though, so if lower end device performance options are added, maybe make them affect this?
+    healthBar.numDivisions = Std.int(healthBarBG.width - 8);
+    add(healthBar);
+    add(healthBarBG);
+
+    if (Preferences.timebar != 'None')
+    {
+      var timeBarYPos:Float = Preferences.downscroll ? FlxG.height * 0.97 : FlxG.height;
+      timeBarBG = FunkinSprite.create(0, timeBarYPos, hudstyle.getTimebarAssetPath());
+      timeBarBG.screenCenter(X);
+      timeBarBG.scrollFactor.set(0, 0);
+      timeBarBG.zIndex = 800;
+      add(timeBarBG);
+
+      var timeoffsets = hudstyle.getTimebarspriteOffsets();
+      var timespriteoffsets = hudstyle.getTimebarbarOffsets();
+
+      timeBar = new FlxBar(timeBarBG.x + timeoffsets[0], timeBarBG.y + timeoffsets[1], LEFT_TO_RIGHT, Std.int(timeBarBG.width + timespriteoffsets[0]),
+        Std.int(timeBarBG.height + timespriteoffsets[1]), this, null, 0, 1);
+      timeBar.scrollFactor.set();
+
+      switch (Preferences.timebar)
+      {
+        case 'Classic':
+          timeBar.createFilledBar(FlxColor.BLACK, FlxColor.WHITE);
+        case "Gradient":
+          timeBar.createGradientBar(emptyarray, fullyarray);
+      }
+      timeBar.zIndex = 802;
+      add(timeBar);
+
+      // The time text.
+      timeTxt = new FlxText(timeBar.x + (FlxG.width / 2) - 248, 19, 400, "", 32);
+      timeTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+      timeTxt.scrollFactor.set();
+      timeTxt.alpha = 1;
+      timeTxt.y = timeBar.y - 10.30;
+      timeTxt.screenCenter(X);
+      timeTxt.borderSize = 2;
+      timeTxt.text = 'unset';
+      timeTxt.zIndex = 810;
+      add(timeTxt);
+    }
+  }
+
+  public function forceupdate(bar:String, value:Float)
+  {
+    switch (bar)
+    {
+      case('timebar'):
+        timeBar.value = value;
+
+      case('healthbar'):
+        healthBar.value = value;
     }
   }
 

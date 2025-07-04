@@ -6,6 +6,8 @@ import funkin.play.character.CharacterData.CharacterDataParser;
 import funkin.play.character.CharacterData.CharacterRenderType;
 import funkin.play.stage.Bopper;
 import funkin.play.notes.NoteDirection;
+import funkin.play.notes.notekind.NoteKindManager;
+import funkin.play.notes.notekind.NoteKind;
 
 /**
  * A Character is a stage prop which bops to the music as well as controlled by the strumlines.
@@ -41,6 +43,11 @@ class BaseCharacter extends Bopper
   public var holdtype:String;
 
   /**
+   *  if singing anims should be overided
+   */
+  public var singoveride:Bool = false;
+
+  /**
    * the frame to look for
    */
   public var holdframeDetect:Int;
@@ -54,6 +61,11 @@ class BaseCharacter extends Bopper
    * so this is for healthcolors...idk what else to say
    */
   public var healthcolor:Array<Int>;
+
+  /**
+   * so this is for healthcolors...idk what else to say
+   */
+  public var curNoteKind:NoteKind;
 
   /**
    * so this is for healthcolors...idk what else to say
@@ -348,6 +360,38 @@ class BaseCharacter extends Bopper
     super.onCreate(event);
   }
 
+  function playComboAnimation(comboCount:Int):Void
+  {
+    var comboAnim = 'combo${comboCount}';
+    if (hasAnimation(comboAnim))
+    {
+      trace('Playing GF combo animation: ${comboAnim}');
+      this.playAnimation(comboAnim, true, true);
+    }
+  }
+
+  function playComboDropAnimation(comboCount:Int):Void
+  {
+    var dropAnim:Null<String> = null;
+
+    // Choose the combo drop anim to play.
+    // If there are several (for example, drop10 and drop50) the highest one will be used.
+    // If the combo count is too low, no animation will be played.
+    for (count in dropNoteCounts)
+    {
+      if (comboCount >= count)
+      {
+        dropAnim = 'drop${count}';
+      }
+    }
+
+    if (dropAnim != null)
+    {
+      trace('Playing GF combo drop animation: ${dropAnim}');
+      this.playAnimation(dropAnim, true, true);
+    }
+  }
+
   function resetCameraFocusPoint():Void
   {
     // Calculate the camera focus point
@@ -515,7 +559,7 @@ class BaseCharacter extends Bopper
       if (isSinging()) return;
 
       var currentAnimation:String = getCurrentAnimation();
-      if ((currentAnimation == 'hey' || currentAnimation == 'cheer') && !isAnimationFinished()) return;
+      if ((currentAnimation != '' || currentAnimation == 'cheer' || currentAnimation == 'hey') && !isAnimationFinished()) return;
     }
 
     // Prevent dancing while another animation is playing.
@@ -580,45 +624,51 @@ class BaseCharacter extends Bopper
   public override function onNoteHit(event:HitNoteScriptEvent)
   {
     super.onNoteHit(event);
+    // If another script cancelled the event, don't do anything.
+    if (event.eventCanceled) return;
+    curNoteKind = NoteKindManager.getNoteKind(event.note.noteData.kind);
 
-    if (event.note.noteData.getMustHitNote() && characterType == BF && event.note.noteData.kind != 'noanim')
+    if (event.note.noteData.getMustHitNote() && characterType == BF)
     {
-      // If the note is from the same strumline, play the sing animation.
-      if (event.note.noteData.kind == 'Alt')
-      { // if more built in notes are added. make a switch
-        trace('test');
-        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
+      if (curNoteKind != null)
+      {
+        if (!curNoteKind.noanim)
+        {
+          this.playSingAnimation(event.note.noteData.getDirection(), false, curNoteKind?.suffix);
+          holdTimer = 0;
+        }
       }
       else
       {
         this.playSingAnimation(event.note.noteData.getDirection(), false);
+        holdTimer = 0;
       }
-
-      holdTimer = 0;
     }
-    else if (!event.note.noteData.getMustHitNote() && characterType == DAD && event.note.noteData.kind != 'noanim')
+    else if (!event.note.noteData.getMustHitNote() && characterType == DAD)
     {
-      if (event.note.noteData.kind == 'Alt')
-      { // if more built in notes are added. make a switch
-        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
+      if (curNoteKind != null)
+      {
+        if (!curNoteKind.noanim)
+        {
+          this.playSingAnimation(event.note.noteData.getDirection(), false, curNoteKind?.suffix);
+          holdTimer = 0;
+        }
       }
       else
       {
         this.playSingAnimation(event.note.noteData.getDirection(), false);
+        holdTimer = 0;
       }
-      holdTimer = 0;
     }
-    else if (characterType == GF && event.note.noteData.kind != 'noanim' && event.note.noteData.kind == 'gf')
+    else if (characterType == GF && event.note.noteData.getMustHitNote())
     {
-      if (event.note.noteData.kind == 'GF-Alt')
-      { // if more built in notes are added. make a switch
-        this.playSingAnimation(event.note.noteData.getDirection(), false, 'alt');
-      }
-      else
+      switch (event.judgement)
       {
-        this.playSingAnimation(event.note.noteData.getDirection(), false);
+        case 'sick' | 'good':
+          playComboAnimation(event.comboCount);
+        default:
+          playComboDropAnimation(event.comboCount);
       }
-      holdTimer = 0;
     }
   }
 
@@ -700,7 +750,10 @@ class BaseCharacter extends Bopper
     var anim:String = 'sing${dir.nameUpper}${miss ? 'miss' : ''}${suffix != '' ? '-${suffix}' : ''}';
 
     // restart even if already playing, because the character might sing the same note twice.
-    playAnimation(anim, true);
+    if (singoveride == false)
+    {
+      playAnimation(anim, true);
+    }
   }
 
   public override function playAnimation(name:String, restart:Bool = false, ignoreOther:Bool = false, reversed:Bool = false):Void

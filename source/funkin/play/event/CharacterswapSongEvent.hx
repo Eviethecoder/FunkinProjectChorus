@@ -7,6 +7,8 @@ import funkin.data.song.SongData.SongEventData;
 import funkin.play.event.SongEvent;
 import funkin.data.event.SongEventSchema;
 import funkin.data.event.SongEventSchema.SongEventFieldType;
+import funkin.play.character.CharacterData.CharacterDataParser;
+import flixel.graphics.frames.FlxFramesCollection;
 
 /**
  * This class represents a handler for a type of song event.
@@ -27,6 +29,10 @@ class CharacterwapSongEvent extends SongEvent
   {
     var targetName = data.getString('target');
     var newcharacter = data.getString('character');
+
+    var precache = CharacterDataParser.fetchCharacter(newcharacter);
+    @:privateAccess
+    var tex:FlxFramesCollection = Paths.getSparrowAtlas(precache._data.assetPath, 'shared');
     /**
      * a passthrough to the playstate code....port this to only be in here eventually.
      */

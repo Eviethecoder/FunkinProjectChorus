@@ -21,43 +21,51 @@ class ChartEditorThemeHandler
   // ================================
   static final BACKGROUND_COLOR_LIGHT:FlxColor = 0xFF673AB7;
   static final BACKGROUND_COLOR_DARK:FlxColor = 0xFF361E60;
-
+  static final BACKGROUND_COLOR_LAVA:FlxColor = FlxColor.fromRGB(245, 185, 29);
   // Color 1 of the grid pattern. Alternates with Color 2.
   static final GRID_COLOR_1_LIGHT:FlxColor = 0xFFE7E6E6;
   static final GRID_COLOR_1_DARK:FlxColor = 0xFF181919;
+  static final GRID_COLOR_1_LAVA:FlxColor = FlxColor.fromRGB(240, 102, 37);
 
   // Color 2 of the grid pattern. Alternates with Color 1.
   static final GRID_COLOR_2_LIGHT:FlxColor = 0xFFF8F8F8;
   static final GRID_COLOR_2_DARK:FlxColor = 0xFF202020;
+  static final GRID_COLOR_2_LAVA:FlxColor = FlxColor.fromRGB(149, 10, 17);
 
   // Color 3 of the grid pattern. Borders the other colors.
   static final GRID_COLOR_3_LIGHT:FlxColor = 0xFFD9D5D5;
   static final GRID_COLOR_3_DARK:FlxColor = 0xFF262A2A;
+  static final GRID_COLOR_3_LAVA:FlxColor = FlxColor.fromRGB(49, 6, 0);
 
   // Vertical divider between characters.
   static final GRID_STRUMLINE_DIVIDER_COLOR_LIGHT:FlxColor = 0xFF111111;
   static final GRID_STRUMLINE_DIVIDER_COLOR_DARK:FlxColor = 0xFFC4C4C4;
+  static final GRID_STRUMLINE_DIVIDER_COLOR_LAVA:FlxColor = FlxColor.fromRGB(27, 17, 12);
   static final GRID_STRUMLINE_DIVIDER_WIDTH:Float = ChartEditorState.GRID_SELECTION_BORDER_WIDTH;
 
   // Horizontal divider between measures.
   static final GRID_MEASURE_DIVIDER_COLOR_LIGHT:FlxColor = 0xFF111111;
   static final GRID_MEASURE_DIVIDER_COLOR_DARK:FlxColor = 0xFFC4C4C4;
+  static final GRID_MEASURE_DIVIDER_COLOR_LAVA:FlxColor = FlxColor.fromRGB(27, 17, 12);
   static final GRID_MEASURE_DIVIDER_WIDTH:Float = ChartEditorState.GRID_SELECTION_BORDER_WIDTH;
 
   // Horizontal divider between beats.
   static final GRID_BEAT_DIVIDER_COLOR_LIGHT:FlxColor = 0xFFC1C1C1;
   static final GRID_BEAT_DIVIDER_COLOR_DARK:FlxColor = 0xFF848484;
+  static final GRID_BEAT_DIVIDER_COLOR_LAVA:FlxColor = FlxColor.fromRGB(27, 17, 12);
   static final GRID_BEAT_DIVIDER_WIDTH:Float = ChartEditorState.GRID_SELECTION_BORDER_WIDTH;
 
   // Border on the square highlighting selected notes.
   static final SELECTION_SQUARE_BORDER_COLOR_LIGHT:FlxColor = 0xFF339933;
   static final SELECTION_SQUARE_BORDER_COLOR_DARK:FlxColor = 0xFF339933;
+  static final SELECTION_SQUARE_BORDER_COLOR_LAVA:FlxColor = 0xFF339933;
   public static final SELECTION_SQUARE_BORDER_WIDTH:Int = 1;
 
   // Fill on the square highlighting selected notes.
   // Make sure this is transparent so you can see the notes underneath.
   static final SELECTION_SQUARE_FILL_COLOR_LIGHT:FlxColor = 0x4033FF33;
   static final SELECTION_SQUARE_FILL_COLOR_DARK:FlxColor = 0x4033FF33;
+  static final SELECTION_SQUARE_FILL_COLOR_LAVA:FlxColor = 0x4033FF33;
 
   static final PLAYHEAD_BLOCK_BORDER_WIDTH:Int = 2;
   static final PLAYHEAD_BLOCK_BORDER_COLOR:FlxColor = 0xFF9D0011;
@@ -66,10 +74,12 @@ class ChartEditorThemeHandler
   // Border on the square over the note preview.
   static final NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_LIGHT = 0xFFF8A657;
   static final NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_DARK = 0xFFF8A657;
+  static final NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_LAVA = 0xFFF8A657;
 
   // Fill on the square over the note preview.
   static final NOTE_PREVIEW_VIEWPORT_FILL_COLOR_LIGHT = 0x80F8A657;
   static final NOTE_PREVIEW_VIEWPORT_FILL_COLOR_DARK = 0x80F8A657;
+  static final NOTE_PREVIEW_VIEWPORT_FILL_COLOR_LAVA = 0x80F8A657;
 
   static final TOTAL_COLUMN_COUNT:Int = ChartEditorState.STRUMLINE_SIZE * 2 + 1;
 
@@ -98,6 +108,7 @@ class ChartEditorThemeHandler
     {
       case ChartEditorTheme.Light: BACKGROUND_COLOR_LIGHT;
       case ChartEditorTheme.Dark: BACKGROUND_COLOR_DARK;
+      case ChartEditorTheme.Lava: BACKGROUND_COLOR_LAVA;
       default: BACKGROUND_COLOR_LIGHT;
     }
   }
@@ -112,6 +123,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_COLOR_1_LIGHT;
       case Dark: GRID_COLOR_1_DARK;
+      case Lava: GRID_COLOR_1_LAVA;
       default: GRID_COLOR_1_LIGHT;
     };
 
@@ -119,6 +131,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_COLOR_2_LIGHT;
       case Dark: GRID_COLOR_2_DARK;
+      case Lava: GRID_COLOR_2_LAVA;
       default: GRID_COLOR_2_LIGHT;
     };
 
@@ -135,6 +148,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_COLOR_3_LIGHT;
       case Dark: GRID_COLOR_3_DARK;
+      case Lava: GRID_COLOR_3_LAVA;
       default: GRID_COLOR_3_LIGHT;
     };
 
@@ -180,6 +194,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_MEASURE_DIVIDER_COLOR_LIGHT;
       case Dark: GRID_MEASURE_DIVIDER_COLOR_DARK;
+      case Lava: GRID_MEASURE_DIVIDER_COLOR_LAVA;
       default: GRID_MEASURE_DIVIDER_COLOR_LIGHT;
     };
 
@@ -195,6 +210,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_BEAT_DIVIDER_COLOR_LIGHT;
       case Dark: GRID_BEAT_DIVIDER_COLOR_DARK;
+      case Lava: GRID_BEAT_DIVIDER_COLOR_LAVA;
       default: GRID_BEAT_DIVIDER_COLOR_LIGHT;
     };
 
@@ -216,6 +232,7 @@ class ChartEditorThemeHandler
     {
       case Light: GRID_STRUMLINE_DIVIDER_COLOR_LIGHT;
       case Dark: GRID_STRUMLINE_DIVIDER_COLOR_DARK;
+      case Lava: GRID_STRUMLINE_DIVIDER_COLOR_LAVA;
       default: GRID_STRUMLINE_DIVIDER_COLOR_LIGHT;
     };
 
@@ -350,6 +367,7 @@ class ChartEditorThemeHandler
     {
       case Light: SELECTION_SQUARE_BORDER_COLOR_LIGHT;
       case Dark: SELECTION_SQUARE_BORDER_COLOR_DARK;
+      case Lava: SELECTION_SQUARE_BORDER_COLOR_LAVA;
       default: SELECTION_SQUARE_BORDER_COLOR_LIGHT;
     };
 
@@ -357,6 +375,7 @@ class ChartEditorThemeHandler
     {
       case Light: SELECTION_SQUARE_FILL_COLOR_LIGHT;
       case Dark: SELECTION_SQUARE_FILL_COLOR_DARK;
+      case Lava: SELECTION_SQUARE_FILL_COLOR_LAVA;
       default: SELECTION_SQUARE_FILL_COLOR_LIGHT;
     };
 
@@ -389,6 +408,7 @@ class ChartEditorThemeHandler
     {
       case Light: NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_LIGHT;
       case Dark: NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_DARK;
+      case Lava: NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_LAVA;
       default: NOTE_PREVIEW_VIEWPORT_BORDER_COLOR_LIGHT;
     };
 
@@ -396,6 +416,7 @@ class ChartEditorThemeHandler
     {
       case Light: NOTE_PREVIEW_VIEWPORT_FILL_COLOR_LIGHT;
       case Dark: NOTE_PREVIEW_VIEWPORT_FILL_COLOR_DARK;
+      case Lava: NOTE_PREVIEW_VIEWPORT_FILL_COLOR_LAVA;
       default: NOTE_PREVIEW_VIEWPORT_FILL_COLOR_LIGHT;
     };
 

@@ -17,6 +17,22 @@ interface IScriptedClass
 }
 
 /**
+ * Defines a set of callbacks available to scripted classes which represent sprites synced with the BPM.
+ */
+interface IBPMSyncedScriptedClass extends IScriptedClass
+{
+  /**
+   * Called once every step of the song.
+   */
+  public function onStepHit(event:SongTimeScriptEvent):Void;
+
+  /**
+   * Called once every beat of the song.
+   */
+  public function onBeatHit(event:SongTimeScriptEvent):Void;
+}
+
+/**
  * Defines an element which can receive script events.
  * For example, the PlayState dispatches the event to all its child elements.
  */

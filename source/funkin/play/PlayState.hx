@@ -9,6 +9,7 @@ import flixel.FlxState;
 import flixel.util.FlxStringUtil;
 import flixel.FlxSubState;
 import flixel.math.FlxMath;
+import funkin.input.Controls;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 import flixel.text.FlxText;
@@ -72,7 +73,7 @@ import lime.ui.Haptic;
 import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
 import openfl.Lib;
-import funkin.api.discord.Discord.DiscordClient;
+import funkin.api.discord.DiscordClient;
 // shit for multi windows
 import lime.app.Application;
 import lime.graphics.RenderContext;
@@ -180,6 +181,27 @@ class PlayState extends MusicBeatSubState
   public var mstimertxt:FlxText;
 
   /**
+   * Project chorus makes the week 7 death lines be usable in any song. this toggle will be what enabbles it
+   */
+  public var deathenabled:Bool = false;
+
+  /**
+   * Project chorus makes the week 7 death lines be usable in any song. this String will allow you to define the namming scheme of said lines. otherwise itl default to the curent character name
+   */
+  public var Deathstring:String = '';
+
+  /**
+   * the show combo variable.  to disable the combo text eather go to settings .
+   * or use the combo overide var.
+   */
+  var shouldShowComboText:Bool = false;
+
+  /**
+   * the focous lock of combomilestones
+   */
+  var focouslocked:Bool;
+
+  /**
    * This sucks. We need this because FlxG.resetState(); assumes the constructor has no arguments.
    * @see https://github.com/HaxeFlixel/flixel/issues/2541
    */
@@ -246,6 +268,12 @@ class PlayState extends MusicBeatSubState
    * The currently selected variation.
    */
   public var currentVariation:String = Constants.DEFAULT_VARIATION;
+
+  /**
+   * The currently selected instrumental ID.
+   * @default `''`
+   */
+  public var currentInstrumental:String = '';
 
   /**
    * The currently active Stage. This is the object containing all the props.
@@ -541,10 +569,9 @@ class PlayState extends MusicBeatSubState
   public var vocals:VoicesGroup;
 
   // Discord RPC variables
-  var storyDifficultyText:String = '';
-  var iconRPC:String = '';
-  var detailsText:String = '';
-  var detailsPausedText:String = '';
+  var discordRPCAlbum:String = '';
+  var discordRPCIcon:String = '';
+  var discordRPCIcontext:String = '';
 
   /**
    * RENDER OBJECTS
@@ -568,8 +595,22 @@ class PlayState extends MusicBeatSubState
    * the rating names. credit goes to kade engine/psych engine
    */
   public static var ratingStuff:Array<Dynamic> = [
-    [99.9935, "AAAAA"], [99.980, "AAAA:"], [99.970, "AAAA."], [99.955, "AAAA"], [99.90, "AAA:"], [99.80, "AAA."], [99.70, "AAA"], [99, "AA:"], [96.50, "AA."],
-    [93, "AA"], [90, "A:"], [85, "A."], [80, "A"], [70, "B"], [60, "C"]];
+    [99.9935, "AAAAA"],
+    [99.980, "AAAA:"],
+    [99.970, "AAAA."],
+    [99.955, "AAAA"],
+    [99.90, "AAA:"],
+    [99.80, "AAA."],
+    [99.70, "AAA"],
+    [99, "AA:"],
+    [96.50, "AA."],
+    [93, "AA"],
+    [90, "A:"],
+    [85, "A."],
+    [80, "A"],
+    [70, "B"],
+    [60, "C"]
+  ];
 
   /**
    * the percent for the huds ranking text.
@@ -602,9 +643,14 @@ class PlayState extends MusicBeatSubState
   public var opponentStrumline:Strumline;
 
   /**
-   * The camera which contains, and controls visibility of, the user interface elements.
+   * The camera which contains, and controls visibility of, the user interface elements. excluding notes..
    */
   public var camHUD:FlxCamera;
+
+  /**
+   * The camera which contains,notes.
+   */
+  public var camNOTES:FlxCamera;
 
   /**
    * The camera which contains, and controls visibility of, the stage and characters.
@@ -622,7 +668,7 @@ class PlayState extends MusicBeatSubState
   public var comboPopUps:PopUpStuff;
 
   /**
-   * The combo popups. Includes the real-time combo counter and the rating.
+   * The cams curent focous!
    */
   public var camFocus:String;
 
@@ -724,6 +770,7 @@ class PlayState extends MusicBeatSubState
     currentSong = params.targetSong;
     if (params.targetDifficulty != null) currentDifficulty = params.targetDifficulty;
     if (params.targetVariation != null) currentVariation = params.targetVariation;
+    if (params.targetInstrumental != null) currentInstrumental = params.targetInstrumental;
     isPracticeMode = params.practiceMode ?? false;
     isBotPlayMode = params.botPlayMode ?? false;
     isMinimalMode = params.minimalMode ?? false;
@@ -783,7 +830,7 @@ class PlayState extends MusicBeatSubState
     // Prepare the current song's instrumental and vocals to be played.
     if (!overrideMusic && currentChart != null)
     {
-      currentChart.cacheInst();
+      currentChart.cacheInst(currentInstrumental);
       currentChart.cacheVocals();
     }
 
@@ -792,11 +839,17 @@ class PlayState extends MusicBeatSubState
 
     if (currentChart.offsets != null)
     {
-      Conductor.instance.instrumentalOffset = currentChart.offsets.getInstrumentalOffset();
+      Conductor.instance.instrumentalOffset = currentChart.offsets.getInstrumentalOffset(currentInstrumental);
     }
 
     Conductor.instance.mapTimeChanges(currentChart.timeChanges);
     Conductor.instance.update((Conductor.instance.beatLengthMs * -5) + startTimestamp);
+
+    trace(currentChart);
+    if (currentChart.death != '' || currentChart.death != '0' || currentChart.death != null)
+    {
+      deathenabled = true;
+    }
 
     // The song is now loaded. We can continue to initialize the play state.
     initCameras();
@@ -873,7 +926,6 @@ class PlayState extends MusicBeatSubState
   {
     var hudStyleId:String = currentChart.hudStyle;
     var hudStyle:HudStyle = new HudStyle(hudStyleId);
-    trace(hudStyle);
     if (hudStyle == null) hudStyle = HudStyleRegistry.instance.fetchDefault();
     // Initialize the judgements and combo meter.
     comboPopUps = new PopUpStuff(hudStyle);
@@ -999,7 +1051,7 @@ class PlayState extends MusicBeatSubState
       {
         // Stop the vocals if they already exist.
         if (vocals != null) vocals.stop();
-        vocals = currentChart.buildVocals();
+        vocals = currentChart.buildVocals(currentInstrumental);
 
         if (vocals.members.length == 0)
         {
@@ -1122,7 +1174,16 @@ class PlayState extends MusicBeatSubState
           // boyfriendPos.put(); // TODO: Why is this here? good question coders...NO CLUE -kuru
         }
 
-        DiscordClient.changePresence(detailsPausedText, currentSong + ' (' + storyDifficultyText + ')', iconRPC);
+        DiscordClient.instance.setPresence(
+          {
+            details: 'Paused - ${buildDiscordRPCDetails()}',
+
+            state: buildDiscordRPCState(),
+
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
       }
     }
 
@@ -1210,7 +1271,15 @@ class PlayState extends MusicBeatSubState
         }
 
         // Game Over doesn't get his own variable because it's only used here
-        DiscordClient.changePresence('Game Over - ' + detailsText, currentSong + ' (' + storyDifficultyText + ')', iconRPC);
+        DiscordClient.instance.setPresence(
+          {
+            details: 'Game Over - ${buildDiscordRPCDetails()}',
+            state: buildDiscordRPCState(),
+
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
       }
       else if (isPlayerDying)
       {
@@ -1243,8 +1312,7 @@ class PlayState extends MusicBeatSubState
     health = Constants.HEALTH_STARTING;
     healthLerp = health;
 
-    bars.shouldupdate = false;
-    bars.healthBar.value = healthLerp;
+    bars.forceupdate('healthbar', health);
 
     iconP1.updatePosition();
     iconP2.updatePosition();
@@ -1300,6 +1368,9 @@ class PlayState extends MusicBeatSubState
 
     // super.dispatchEvent(event) dispatches event to module scripts.
     super.dispatchEvent(event);
+
+    // Dispatch event to event notes
+    if (songEvents != null && songEvents.length > 0) SongEventRegistry.callEvent(songEvents, event);
 
     // Dispatch event to note kind scripts
     NoteKindManager.callEvent(event);
@@ -1404,16 +1475,32 @@ class PlayState extends MusicBeatSubState
       // Resume the countdown.
       Countdown.resumeCountdown();
 
-      if (Countdown.countdownStep == AFTER)
+      if (Conductor.instance.songPosition > 0)
       {
-        DiscordClient.changePresence(detailsText, '${currentChart.songName} ($storyDifficultyText)', iconRPC, true,
-          currentSongLengthMs - Conductor.instance.songPosition);
+        // DiscordClient.changePresence(detailsText, '${currentChart.songName} ($discordRPCDifficulty)', discordRPCIcon, true,
+        //   currentSongLengthMs - Conductor.instance.songPosition);
+        DiscordClient.instance.setPresence(
+          {
+            state: buildDiscordRPCState(),
+            details: buildDiscordRPCDetails(),
+
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
       }
       else
       {
-        DiscordClient.changePresence(detailsText, '${currentChart.songName} ($storyDifficultyText)', iconRPC);
-      }
+        DiscordClient.instance.setPresence(
+          {
+            state: buildDiscordRPCState(),
+            details: buildDiscordRPCDetails(),
 
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
+      }
       justUnpaused = true;
     }
     else if (Std.isOfType(subState, Transition))
@@ -1431,16 +1518,33 @@ class PlayState extends MusicBeatSubState
   {
     if (health > Constants.HEALTH_MIN && !isGamePaused && FlxG.autoPause)
     {
-      if (Conductor.instance.songPosition > 0.0) DiscordClient.changePresence(detailsText, currentSong
-        + ' ('
-        + storyDifficultyText
-        + ')', iconRPC, true,
-        currentSongLengthMs
-        - Conductor.instance.songPosition);
-      else
-        DiscordClient.changePresence(detailsText, currentSong + ' (' + storyDifficultyText + ')', iconRPC);
-    }
+      if (Conductor.instance.songPosition > 0.0)
+      {
+        DiscordClient.instance.setPresence(
+          {
+            state: buildDiscordRPCState(),
+            details: buildDiscordRPCDetails(),
 
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
+      }
+      else
+      {
+        DiscordClient.instance.setPresence(
+          {
+            state: buildDiscordRPCState(),
+            details: buildDiscordRPCDetails(),
+
+            largeImageKey: discordRPCAlbum,
+            smallImageKey: discordRPCIcon,
+            smallImageText: discordRPCIcontext
+          });
+        // DiscordClient.changePresence(detailsText, '${currentChart.songName} ($discordRPCDifficulty)', discordRPCIcon, true,
+        //   currentSongLengthMs - Conductor.instance.songPosition);
+      }
+    }
     super.onFocus();
   }
 
@@ -1449,8 +1553,18 @@ class PlayState extends MusicBeatSubState
      */
   public override function onFocusLost():Void
   {
-    if (health > Constants.HEALTH_MIN && !isGamePaused && FlxG.autoPause) DiscordClient.changePresence(detailsPausedText,
-      currentSong + ' (' + storyDifficultyText + ')', iconRPC);
+    if (health > Constants.HEALTH_MIN && !isGamePaused && FlxG.autoPause)
+    {
+      DiscordClient.instance.setPresence(
+        {
+          state: buildDiscordRPCState(),
+          details: buildDiscordRPCDetails(),
+
+          largeImageKey: discordRPCAlbum,
+          smallImageKey: discordRPCIcon,
+          smallImageText: discordRPCIcontext
+        });
+    }
     if (health >= Constants.HEALTH_MIN && !isPlayerDying && isInCountdown && mayPauseGame && !justUnpaused)
     {
       var event = new PauseScriptEvent(FlxG.random.bool(1 / 1000));
@@ -1606,34 +1720,37 @@ class PlayState extends MusicBeatSubState
 
     // Break up into individual lines to aid debugging.
 
-    var shouldShowComboText:Bool = false;
-    // TODO: Re-enable combo text (how to do this without sections?).
+    // thus doesnt work fuuuck. -kuru
     // if (currentSong != null)
     // {
-    //  shouldShowComboText = (Conductor.instance.currentBeat % 8 == 7);
-    //  var daSection = .getSong()[Std.int(Conductor.instance.currentBeat / 16)];
-    //  shouldShowComboText = shouldShowComboText && (daSection != null && daSection.mustHitSection);
-    //  shouldShowComboText = shouldShowComboText && (Highscore.tallies.combo > 5);
-    //
-    //  var daNextSection = .getSong()[Std.int(Conductor.instance.currentBeat / 16) + 1];
-    //  var isEndOfSong = .getSong().length < Std.int(Conductor.instance.currentBeat / 16);
-    //  shouldShowComboText = shouldShowComboText && (isEndOfSong || (daNextSection != null && !daNextSection.mustHitSection));
+    //   shouldShowComboText = (Conductor.instance.currentBeat % 8 == 7);
+    //   shouldShowComboText = shouldShowComboText && (Highscore.tallies.combo > 5);
+    //   if (camFocus == 'Boyfriend')
+    //   {
+    //     focouslocked = true;
+    //   }
+    //   else
+    //   {
+    //     focouslocked = false;
+    //   }
+    //   trace('combo text shown: ' + shouldShowComboText + 'focousLocked: ' + focouslocked);
     // }
 
-    if (shouldShowComboText)
-    {
-      var animShit:ComboMilestone = new ComboMilestone(-100, 300, Highscore.tallies.combo);
-      animShit.scrollFactor.set(0.6, 0.6);
-      animShit.zIndex = 1100;
-      animShit.cameras = [camHUD];
-      add(animShit);
+    // if (shouldShowComboText && focouslocked != true)
+    // {
+    //   var animShit:ComboMilestone = new ComboMilestone(-100, 300, Highscore.tallies.combo);
+    //   animShit.scrollFactor.set(0.6, 0.6);
+    //   animShit.zIndex = 1100;
+    //   animShit.cameras = [camHUD];
+    //   add(animShit);
 
-      var frameShit:Float = (1 / 24) * 2; // equals 2 frames in the animation
+    //   var frameShit:Float = (1 / 24) * 2; // equals 2 frames in the animation
 
-      new FlxTimer().start(((Conductor.instance.beatLengthMs / 1000) * 1.25) - frameShit, function(tmr) {
-        animShit.forceFinish();
-      });
-    }
+    //   new FlxTimer().start(((Conductor.instance.beatLengthMs / 1000) * 1.25) - frameShit, function(tmr) {
+    //     animShit.forceFinish();
+    //   });
+    //   if (focouslocked == true) focouslocked == false;
+    // }
 
     if (playerStrumline != null) playerStrumline.onBeatHit();
     if (opponentStrumline != null) opponentStrumline.onBeatHit();
@@ -1677,13 +1794,16 @@ class PlayState extends MusicBeatSubState
   function initCameras():Void
   {
     camGame = new FunkinCamera('playStateCamGame');
-    camGame.bgColor = BACKGROUND_COLOR; // Show a pink background behind the stage.
+    camGame.bgColor = BACKGROUND_COLOR; // Show a pink background behind the stage.  camNOTES
     camHUD = new FlxCamera();
     camHUD.bgColor.alpha = 0; // Show the game scene behind the camera.
+    camNOTES = new FlxCamera();
+    camNOTES.bgColor.alpha = 0; // Show the game scene behind the camera.
     camCutscene = new FlxCamera();
     camCutscene.bgColor.alpha = 0; // Show the game scene behind the camera.
 
     FlxG.cameras.reset(camGame);
+    FlxG.cameras.add(camNOTES, false);
     FlxG.cameras.add(camHUD, false);
     FlxG.cameras.add(camCutscene, false);
 
@@ -1969,6 +2089,11 @@ class PlayState extends MusicBeatSubState
     iconP2.zIndex = 850;
     add(iconP2);
     iconP2.cameras = [camHUD];
+
+    discordRPCAlbum = 'album-${currentChart.album}';
+    discordRPCIcon = 'icon-${currentStage.getDad().characterId}';
+
+    discordRPCIcontext = currentStage.getDad().characterId;
   }
 
   /**
@@ -2000,13 +2125,13 @@ class PlayState extends MusicBeatSubState
     }
     playerStrumline.y = Preferences.downscroll ? FlxG.height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET : Constants.STRUMLINE_Y_OFFSET;
     playerStrumline.zIndex = 1001;
-    playerStrumline.cameras = [camHUD];
+    playerStrumline.cameras = [camNOTES];
 
     // Position the opponent strumline on the left half of the screen
     opponentStrumline.x = Constants.STRUMLINE_X_OFFSET;
     opponentStrumline.y = Preferences.downscroll ? FlxG.height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET : Constants.STRUMLINE_Y_OFFSET;
     opponentStrumline.zIndex = 1000;
-    opponentStrumline.cameras = [camHUD];
+    opponentStrumline.cameras = [camNOTES];
     if (Preferences.middlescroll)
     {
       opponentStrumline.alpha = 0;
@@ -2046,7 +2171,7 @@ class PlayState extends MusicBeatSubState
         }
         playerStrumline.y = Preferences.downscroll ? FlxG.height - playerStrumline.height - Constants.STRUMLINE_Y_OFFSET : Constants.STRUMLINE_Y_OFFSET;
         playerStrumline.zIndex = 1001;
-        playerStrumline.cameras = [camHUD];
+        playerStrumline.cameras = [camNOTES];
         add(playerStrumline);
       case 'dad' | 'opponent':
         remove(opponentStrumline);
@@ -2058,7 +2183,7 @@ class PlayState extends MusicBeatSubState
         opponentStrumline.x = Constants.STRUMLINE_X_OFFSET;
         opponentStrumline.y = Preferences.downscroll ? FlxG.height - opponentStrumline.height - Constants.STRUMLINE_Y_OFFSET : Constants.STRUMLINE_Y_OFFSET;
         opponentStrumline.zIndex = 1000;
-        opponentStrumline.cameras = [camHUD];
+        opponentStrumline.cameras = [camNOTES];
         if (Preferences.middlescroll)
         {
           opponentStrumline.alpha = 0;
@@ -2076,25 +2201,65 @@ class PlayState extends MusicBeatSubState
      */
   function initDiscord():Void
   {
-    storyDifficultyText = currentDifficulty;
-    iconRPC = currentStage.getDad().characterId;
-
-    // To avoid having duplicate images in Discord assets
-    switch (iconRPC)
-    {
-      case 'senpai-angry':
-        iconRPC = 'senpai';
-      case 'monster-christmas':
-        iconRPC = 'monster';
-      case 'mom-car':
-        iconRPC = 'mom';
-    }
-
-    // String that contains the mode defined here so it isn't necessary to call changePresence for each mode
-    detailsText = PlayStatePlaylist.isStoryMode ? 'Story Mode: Week ${PlayStatePlaylist.campaignId}' : 'Freeplay';
+    #if FEATURE_DISCORD_RPC
+    // Determine the details strings once and reuse them.
 
     // Updating Discord Rich Presence.
-    DiscordClient.changePresence(detailsText, '${currentChart.songName} ($storyDifficultyText)', iconRPC);
+    DiscordClient.instance.setPresence(
+      {
+        state: buildDiscordRPCState(),
+        details: buildDiscordRPCDetails(),
+
+        largeImageKey: discordRPCAlbum,
+        smallImageKey: discordRPCIcon,
+        smallImageText: discordRPCIcontext
+      });
+    #end
+
+    #if FEATURE_DISCORD_RPC
+    // Updating Discord Rich Presence.
+    DiscordClient.instance.setPresence(
+      {
+        state: buildDiscordRPCState(),
+        details: buildDiscordRPCDetails(),
+        largeImageKey: discordRPCAlbum,
+        smallImageKey: discordRPCIcon,
+        smallImageText: discordRPCIcontext
+      });
+    #end
+  }
+
+  function buildDiscordRPCDetails():String
+  {
+    if (PlayStatePlaylist.isStoryMode)
+    {
+      return 'Story Mode: ${PlayStatePlaylist.campaignTitle}';
+    }
+    else
+    {
+      if (isChartingMode)
+      {
+        return 'Chart Editor [Playtest]';
+      }
+      else if (isPracticeMode)
+      {
+        return 'Freeplay [Practice]';
+      }
+      else if (isBotPlayMode)
+      {
+        return 'Freeplay [Bot Play]';
+      }
+      else
+      {
+        return 'Freeplay';
+      }
+    }
+  }
+
+  function buildDiscordRPCState():String
+  {
+    var discordRPCDifficulty = PlayState.instance.currentDifficulty.replace('-', ' ').toTitleCase();
+    return '${currentChart.songName} [${discordRPCDifficulty}]';
   }
 
   function initPreciseInputs():Void
@@ -2120,7 +2285,7 @@ class PlayState extends MusicBeatSubState
     {
       // Stop the vocals if they already exist.
       if (vocals != null) vocals.stop();
-      vocals = currentChart.buildVocals();
+      vocals = currentChart.buildVocals(currentInstrumental);
 
       if (vocals.members.length == 0)
       {
@@ -2149,6 +2314,7 @@ class PlayState extends MusicBeatSubState
     dispatchEvent(event);
 
     var builtNoteData = event.notes;
+
     var builtEventData = event.events;
 
     songEvents = builtEventData;
@@ -2259,7 +2425,7 @@ class PlayState extends MusicBeatSubState
 
     if (!overrideMusic && !isGamePaused && currentChart != null)
     {
-      currentChart.playInst(1.0, false);
+      currentChart.playInst(1.0, currentInstrumental, false);
     }
 
     if (FlxG.sound.music == null)
@@ -2286,7 +2452,15 @@ class PlayState extends MusicBeatSubState
     vocals.pitch = playbackRate;
 
     // Updating Discord Rich Presence (with Time Left)
-    DiscordClient.changePresence(detailsText, '${currentChart.songName} ($storyDifficultyText)', iconRPC, true, currentSongLengthMs, 'eye');
+    DiscordClient.instance.setPresence(
+      {
+        state: buildDiscordRPCState(),
+        details: buildDiscordRPCDetails(),
+
+        largeImageKey: discordRPCAlbum,
+        smallImageKey: discordRPCIcon,
+        smallImageText: discordRPCIcontext
+      });
 
     if (startTimestamp > 0)
     {
@@ -2359,7 +2533,7 @@ class PlayState extends MusicBeatSubState
     }
     else
     {
-      scoreText.text = 'Score:' + songScore + ' | Misses: ' + misscount + " |" + getRating(acc);
+      scoreText.text = 'Score: $songScore' + ' | Misses: $misscount' + " | Score Rank" + getRating(acc);
     }
   }
 
@@ -2975,309 +3149,379 @@ class PlayState extends MusicBeatSubState
       persistentUpdate = false;
       openSubState(new StageOffsetSubState());
     }
+    #end
 
+    #if FEATURE_CHART_EDITOR
     // Redirect to the chart editor playing the current song.
     if (controls.DEBUG_CHART)
     {
+      disableKeys = true;
+      persistentUpdate = false;
       if (isChartingMode)
       {
-        if (FlxG.sound.music != null) FlxG.sound.music.pause(); // Don't reset song position!
-        this.close(); // This only works because PlayState is a substate!
+        // Close the playtest substate.
+        FlxG.sound.music?.pause();
+        this.close();
+      }
+    #end
+
+      #if (debug || FORCE_DEBUG_VERSION)
+      // 1: End the song immediately.
+      if (FlxG.keys.justPressed.ONE) endSong(true);
+
+      // 2: Gain 10% health.
+      if (FlxG.keys.justPressed.TWO) health += 0.1 * Constants.HEALTH_MAX;
+
+      // 3: Lose 5% health.
+      if (FlxG.keys.justPressed.THREE) health -= 0.05 * Constants.HEALTH_MAX;
+      #end
+
+      // 9: Toggle the old icon.
+      if (FlxG.keys.justPressed.NINE) iconP1.toggleOldIcon();
+
+      #if (debug || FORCE_DEBUG_VERSION)
+      // PAGEUP: Skip forward two sections.
+      // SHIFT+PAGEUP: Skip forward twenty sections.
+      if (FlxG.keys.justPressed.PAGEUP) changeSection(FlxG.keys.pressed.SHIFT ? 20 : 2);
+      // PAGEDOWN: Skip backward two section. Doesn't replace notes.
+      // SHIFT+PAGEDOWN: Skip backward twenty sections.
+      if (FlxG.keys.justPressed.PAGEDOWN) changeSection(FlxG.keys.pressed.SHIFT ? -20 : -2);
+      #end
+
+      if (FlxG.keys.justPressed.B) trace(inputSpitter.join('\n'));
+    }
+
+    /**
+       * Handles applying health, score, and ratings.
+       */
+    function applyScore(score:Int, daRating:String, healthChange:Float, isComboBreak:Bool)
+    {
+      switch (daRating)
+      {
+        case 'killer':
+          Highscore.tallies.killer += 1;
+        case 'sick':
+          Highscore.tallies.sick += 1;
+        case 'good':
+          Highscore.tallies.good += 1;
+        case 'bad':
+          Highscore.tallies.bad += 1;
+        case 'shit':
+          Highscore.tallies.shit += 1;
+        case 'miss':
+          Highscore.tallies.missed += 1;
+      }
+      health += healthChange;
+      if (isComboBreak)
+      {
+        // Break the combo, but don't increment tallies.misses.
+        if (Highscore.tallies.combo >= 10) comboPopUps.displayCombo(0);
+        Highscore.tallies.combo = 0;
       }
       else
       {
-        disableKeys = true;
-        persistentUpdate = false;
-        FlxG.switchState(() -> new ChartEditorState(
+        Highscore.tallies.combo++;
+        if (Highscore.tallies.combo > Highscore.tallies.maxCombo) Highscore.tallies.maxCombo = Highscore.tallies.combo;
+      }
+      songScore += score;
+    }
+
+    /**
+       * Handles health, score, and rating popups when a note is hit.
+       */
+    function popUpScore(daRating:String, ?combo:Int):Void
+    {
+      if (daRating == 'miss')
+      {
+        // If daRating is 'miss', that means we made a mistake and should not continue.
+        FlxG.log.warn('popUpScore judged a note as a miss!');
+        // TODO: Remove this.
+        // comboPopUps.displayRating('miss');
+        return;
+      }
+      if (combo == null) combo = Highscore.tallies.combo;
+
+      if (!isPracticeMode)
+      {
+        // TODO: Input splitter uses old input system, make it pull from the precise input queue directly.
+        var pressArray:Array<Bool> = [
+          controls.NOTE_LEFT_P,
+          controls.NOTE_DOWN_P,
+          controls.NOTE_UP_P,
+          controls.NOTE_RIGHT_P
+        ];
+
+        var indices:Array<Int> = [];
+        for (i in 0...pressArray.length)
+        {
+          if (pressArray[i]) indices.push(i);
+        }
+        if (indices.length > 0)
+        {
+          for (i in 0...indices.length)
           {
-            targetSongId: currentSong.id,
-          }));
-      }
-    }
-    #end
-
-    #if (debug || FORCE_DEBUG_VERSION)
-    // 1: End the song immediately.
-    if (FlxG.keys.justPressed.ONE) endSong(true);
-
-    // 2: Gain 10% health.
-    if (FlxG.keys.justPressed.TWO) health += 0.1 * Constants.HEALTH_MAX;
-
-    // 3: Lose 5% health.
-    if (FlxG.keys.justPressed.THREE) health -= 0.05 * Constants.HEALTH_MAX;
-    #end
-
-    // 9: Toggle the old icon.
-    if (FlxG.keys.justPressed.NINE) iconP1.toggleOldIcon();
-
-    #if (debug || FORCE_DEBUG_VERSION)
-    // PAGEUP: Skip forward two sections.
-    // SHIFT+PAGEUP: Skip forward twenty sections.
-    if (FlxG.keys.justPressed.PAGEUP) changeSection(FlxG.keys.pressed.SHIFT ? 20 : 2);
-    // PAGEDOWN: Skip backward two section. Doesn't replace notes.
-    // SHIFT+PAGEDOWN: Skip backward twenty sections.
-    if (FlxG.keys.justPressed.PAGEDOWN) changeSection(FlxG.keys.pressed.SHIFT ? -20 : -2);
-    #end
-
-    if (FlxG.keys.justPressed.B) trace(inputSpitter.join('\n'));
-  }
-
-  /**
-     * Handles applying health, score, and ratings.
-     */
-  function applyScore(score:Int, daRating:String, healthChange:Float, isComboBreak:Bool)
-  {
-    switch (daRating)
-    {
-      case 'killer':
-        Highscore.tallies.killer += 1;
-      case 'sick':
-        Highscore.tallies.sick += 1;
-      case 'good':
-        Highscore.tallies.good += 1;
-      case 'bad':
-        Highscore.tallies.bad += 1;
-      case 'shit':
-        Highscore.tallies.shit += 1;
-      case 'miss':
-        Highscore.tallies.missed += 1;
-    }
-    health += healthChange;
-    if (isComboBreak)
-    {
-      // Break the combo, but don't increment tallies.misses.
-      if (Highscore.tallies.combo >= 10) comboPopUps.displayCombo(0);
-      Highscore.tallies.combo = 0;
-    }
-    else
-    {
-      Highscore.tallies.combo++;
-      if (Highscore.tallies.combo > Highscore.tallies.maxCombo) Highscore.tallies.maxCombo = Highscore.tallies.combo;
-    }
-    songScore += score;
-  }
-
-  /**
-     * Handles health, score, and rating popups when a note is hit.
-     */
-  function popUpScore(daRating:String, ?combo:Int):Void
-  {
-    if (daRating == 'miss')
-    {
-      // If daRating is 'miss', that means we made a mistake and should not continue.
-      FlxG.log.warn('popUpScore judged a note as a miss!');
-      // TODO: Remove this.
-      // comboPopUps.displayRating('miss');
-      return;
-    }
-    if (combo == null) combo = Highscore.tallies.combo;
-
-    if (!isPracticeMode)
-    {
-      // TODO: Input splitter uses old input system, make it pull from the precise input queue directly.
-      var pressArray:Array<Bool> = [
-        controls.NOTE_LEFT_P,
-        controls.NOTE_DOWN_P,
-        controls.NOTE_UP_P,
-        controls.NOTE_RIGHT_P
-      ];
-
-      var indices:Array<Int> = [];
-      for (i in 0...pressArray.length)
-      {
-        if (pressArray[i]) indices.push(i);
-      }
-      if (indices.length > 0)
-      {
-        for (i in 0...indices.length)
+            inputSpitter.push(
+              {
+                t: Std.int(Conductor.instance.songPosition),
+                d: indices[i],
+                l: 20
+              });
+          }
+        }
+        else
         {
           inputSpitter.push(
             {
               t: Std.int(Conductor.instance.songPosition),
-              d: indices[i],
+              d: -1,
               l: 20
             });
         }
       }
-      else
-      {
-        inputSpitter.push(
-          {
-            t: Std.int(Conductor.instance.songPosition),
-            d: -1,
-            l: 20
-          });
-      }
+      comboPopUps.displayRating(daRating);
+      if (combo >= 10 || combo == 0) comboPopUps.displayCombo(combo);
+
+      vocals.playerVolume = 1;
     }
-    comboPopUps.displayRating(daRating);
-    if (combo >= 10 || combo == 0) comboPopUps.displayCombo(combo);
 
-    vocals.playerVolume = 1;
-  }
-
-  /**
-     * Handle keyboard inputs during cutscenes.
-     * This includes advancing conversations and skipping videos.
-     * @param elapsed Time elapsed since last game update.
-     */
-  function handleCutsceneKeys(elapsed:Float):Void
-  {
-    if (isGamePaused) return;
-
-    if (currentConversation != null)
+    /**
+       * Handle keyboard inputs during cutscenes.
+       * This includes advancing conversations and skipping videos.
+       * @param elapsed Time elapsed since last game update.
+       */
+    function handleCutsceneKeys(elapsed:Float):Void
     {
-      // Pause/unpause may conflict with advancing the conversation!
-      if (controls.CUTSCENE_ADVANCE && !justUnpaused)
+      if (isGamePaused) return;
+
+      if (currentConversation != null)
       {
-        currentConversation.advanceConversation();
-      }
-      else if (controls.PAUSE && !justUnpaused)
-      {
-        currentConversation.pauseMusic();
-
-        var pauseSubState:FlxSubState = new PauseSubState({mode: Conversation});
-
-        persistentUpdate = false;
-        FlxTransitionableState.skipNextTransIn = true;
-        FlxTransitionableState.skipNextTransOut = true;
-        pauseSubState.camera = camCutscene;
-        openSubState(pauseSubState);
-      }
-    }
-    else if (VideoCutscene.isPlaying())
-    {
-      // This is a video cutscene.
-      if (controls.PAUSE && !justUnpaused)
-      {
-        VideoCutscene.pauseVideo();
-
-        var pauseSubState:FlxSubState = new PauseSubState({mode: Cutscene});
-
-        persistentUpdate = false;
-        FlxTransitionableState.skipNextTransIn = true;
-        FlxTransitionableState.skipNextTransOut = true;
-        pauseSubState.camera = camCutscene;
-        openSubState(pauseSubState);
-      }
-    }
-  }
-
-  /**
-     * Handle logic for actually skipping a video cutscene after it has been held.
-     */
-  function skipVideoCutscene():Void
-  {
-    VideoCutscene.finishVideo();
-  }
-
-  /**
-     * End the song. Handle saving high scores and transitioning to the results screen.
-     *
-     * Broadcasts an `onSongEnd` event, which can be cancelled to prevent the song from ending (for a cutscene or something).
-     * Remember to call `endSong` again when the song should actually end!
-     * @param rightGoddamnNow If true, don't play the fancy animation where you zoom onto Girlfriend. Used after a cutscene.
-     */
-  public function endSong(rightGoddamnNow:Bool = false):Void
-  {
-    if (FlxG.sound.music != null) FlxG.sound.music.volume = 0;
-    vocals.volume = 0;
-    mayPauseGame = false;
-
-    // Check if any events want to prevent the song from ending.
-    var event = new ScriptEvent(SONG_END, true);
-    dispatchEvent(event);
-    if (event.eventCanceled) return;
-
-    #if sys
-    // spitter for ravy, teehee!!
-    var writer = new json2object.JsonWriter<Array<ScoreInput>>();
-    var output = writer.write(inputSpitter, '  ');
-    sys.io.File.saveContent("./scores.json", output);
-    #end
-
-    deathCounter = 0;
-
-    var isNewHighscore = false;
-
-    if (currentSong != null && currentSong.validScore)
-    {
-      // crackhead double thingie, sets whether was new highscore, AND saves the song!
-      var data =
+        // Pause/unpause may conflict with advancing the conversation!
+        if (controls.CUTSCENE_ADVANCE && !justUnpaused)
         {
-          score: songScore,
-          tallies:
-            {
-              killer: Highscore.tallies.killer,
-              sick: Highscore.tallies.sick,
-              good: Highscore.tallies.good,
-              bad: Highscore.tallies.bad,
-              shit: Highscore.tallies.shit,
-              missed: Highscore.tallies.missed,
-              combo: Highscore.tallies.combo,
-              maxCombo: Highscore.tallies.maxCombo,
-              totalNotesHit: Highscore.tallies.totalNotesHit,
-              totalNotes: Highscore.tallies.totalNotes,
-            },
-        };
+          currentConversation.advanceConversation();
+        }
+        else if (controls.PAUSE && !justUnpaused)
+        {
+          currentConversation.pauseMusic();
 
-      // adds current song data into the tallies for the level (story levels)
-      Highscore.talliesLevel = Highscore.combineTallies(Highscore.tallies, Highscore.talliesLevel);
+          var pauseSubState:FlxSubState = new PauseSubState({mode: Conversation});
 
-      if (!isPracticeMode && !isBotPlayMode && Save.instance.isSongHighScore(currentSong.id, currentDifficulty, data))
+          persistentUpdate = false;
+          FlxTransitionableState.skipNextTransIn = true;
+          FlxTransitionableState.skipNextTransOut = true;
+          pauseSubState.camera = camCutscene;
+          openSubState(pauseSubState);
+        }
+      }
+      else if (VideoCutscene.isPlaying())
       {
-        Save.instance.setSongScore(currentSong.id, currentDifficulty, data);
-        #if newgrounds
-        NGio.postScore(score, currentSong.id);
-        #end
-        isNewHighscore = true;
+        // This is a video cutscene.
+        if (controls.PAUSE && !justUnpaused)
+        {
+          VideoCutscene.pauseVideo();
+
+          var pauseSubState:FlxSubState = new PauseSubState({mode: Cutscene});
+
+          persistentUpdate = false;
+          FlxTransitionableState.skipNextTransIn = true;
+          FlxTransitionableState.skipNextTransOut = true;
+          pauseSubState.camera = camCutscene;
+          openSubState(pauseSubState);
+        }
       }
     }
 
-    if (PlayStatePlaylist.isStoryMode)
+    /**
+       * Handle logic for actually skipping a video cutscene after it has been held.
+       */
+    function skipVideoCutscene():Void
     {
-      isNewHighscore = false;
+      VideoCutscene.finishVideo();
+    }
 
-      PlayStatePlaylist.campaignScore += songScore;
+    /**
+       * End the song. Handle saving high scores and transitioning to the results screen.
+       *
+       * Broadcasts an `onSongEnd` event, which can be cancelled to prevent the song from ending (for a cutscene or something).
+       * Remember to call `endSong` again when the song should actually end!
+       * @param rightGoddamnNow If true, don't play the fancy animation where you zoom onto Girlfriend. Used after a cutscene.
+       */
+    public function endSong(rightGoddamnNow:Bool = false):Void
+    {
+      if (FlxG.sound.music != null) FlxG.sound.music.volume = 0;
+      vocals.volume = 0;
+      mayPauseGame = false;
 
-      // Pop the next song ID from the list.
-      // Returns null if the list is empty.
-      var targetSongId:String = PlayStatePlaylist.playlistSongIds.shift();
+      // Check if any events want to prevent the song from ending.
+      var event = new ScriptEvent(SONG_END, true);
+      dispatchEvent(event);
+      if (event.eventCanceled) return;
 
-      if (targetSongId == null)
+      #if sys
+      // spitter for ravy, teehee!!
+      var writer = new json2object.JsonWriter<Array<ScoreInput>>();
+      var output = writer.write(inputSpitter, '  ');
+      sys.io.File.saveContent("./scores.json", output);
+      #end
+
+      deathCounter = 0;
+      // TODO: This line of code makes me sad, but you can't really fix it without a breaking migration.
+      // `easy`, `erect`, `normal-pico`, etc.
+      var suffixedDifficulty = (currentVariation != Constants.DEFAULT_VARIATION
+        && currentVariation != 'erect') ? '$currentDifficulty-${currentVariation}' : currentDifficulty;
+
+      var isNewHighscore = false;
+      var prevScoreData:Null<SaveScoreData> = Save.instance.getSongScore(currentSong.id, suffixedDifficulty);
+      if (currentSong != null && currentSong.validScore)
       {
-        if (currentSong.validScore)
-        {
-          NGio.unlockMedal(60961);
-
-          var data =
-            {
-              score: PlayStatePlaylist.campaignScore,
-              tallies:
-                {
-                  // TODO: Sum up the values for the whole Week!
-                  killer: 0,
-                  sick: 0,
-                  good: 0,
-                  bad: 0,
-                  shit: 0,
-                  missed: 0,
-                  combo: 0,
-                  maxCombo: 0,
-                  totalNotesHit: 0,
-                  totalNotes: 0,
-                },
-            };
-
-          if (Save.instance.isLevelHighScore(PlayStatePlaylist.campaignId, PlayStatePlaylist.campaignDifficulty, data))
+        // crackhead double thingie, sets whether was new highscore, AND saves the song!
+        var data =
           {
-            Save.instance.setLevelScore(PlayStatePlaylist.campaignId, PlayStatePlaylist.campaignDifficulty, data);
-            #if newgrounds
-            NGio.postScore(score, 'Level ${PlayStatePlaylist.campaignId}');
-            #end
-            isNewHighscore = true;
+            score: songScore,
+            tallies:
+              {
+                killer: Highscore.tallies.killer,
+                sick: Highscore.tallies.sick,
+                good: Highscore.tallies.good,
+                bad: Highscore.tallies.bad,
+                shit: Highscore.tallies.shit,
+                missed: Highscore.tallies.missed,
+                combo: Highscore.tallies.combo,
+                maxCombo: Highscore.tallies.maxCombo,
+                totalNotesHit: Highscore.tallies.totalNotesHit,
+                totalNotes: Highscore.tallies.totalNotes,
+              },
+          };
+
+        // adds current song data into the tallies for the level (story levels)
+        Highscore.talliesLevel = Highscore.combineTallies(Highscore.tallies, Highscore.talliesLevel);
+
+        if (!isPracticeMode && !isBotPlayMode && Save.instance.isSongHighScore(currentSong.id, currentDifficulty, data))
+        {
+          Save.instance.setSongScore(currentSong.id, currentDifficulty, data);
+          #if newgrounds
+          NGio.postScore(score, currentSong.id);
+          #end
+          isNewHighscore = true;
+        }
+      }
+
+      if (PlayStatePlaylist.isStoryMode)
+      {
+        isNewHighscore = false;
+
+        PlayStatePlaylist.campaignScore += songScore;
+
+        // Pop the next song ID from the list.
+        // Returns null if the list is empty.
+        var targetSongId:String = PlayStatePlaylist.playlistSongIds.shift();
+
+        if (targetSongId == null)
+        {
+          if (currentSong.validScore)
+          {
+            NGio.unlockMedal(60961);
+
+            var data =
+              {
+                score: PlayStatePlaylist.campaignScore,
+                tallies:
+                  {
+                    // TODO: Sum up the values for the whole Week!
+                    killer: 0,
+                    sick: 0,
+                    good: 0,
+                    bad: 0,
+                    shit: 0,
+                    missed: 0,
+                    combo: 0,
+                    maxCombo: 0,
+                    totalNotesHit: 0,
+                    totalNotes: 0,
+                  },
+              };
+
+            if (Save.instance.isLevelHighScore(PlayStatePlaylist.campaignId, PlayStatePlaylist.campaignDifficulty, data))
+            {
+              Save.instance.setLevelScore(PlayStatePlaylist.campaignId, PlayStatePlaylist.campaignDifficulty, data);
+              #if newgrounds
+              NGio.postScore(score, 'Level ${PlayStatePlaylist.campaignId}');
+              #end
+              isNewHighscore = true;
+            }
+          }
+
+          if (isSubState)
+          {
+            this.close();
+          }
+          else
+          {
+            if (rightGoddamnNow)
+            {
+              moveToResultsScreen(isNewHighscore);
+            }
+            else
+            {
+              zoomIntoResultsScreen(isNewHighscore);
+            }
           }
         }
+        else
+        {
+          var difficulty:String = '';
 
+          trace('Loading next song ($targetSongId : $difficulty)');
+
+          FlxTransitionableState.skipNextTransIn = true;
+          FlxTransitionableState.skipNextTransOut = true;
+
+          if (FlxG.sound.music != null) FlxG.sound.music.stop();
+          vocals.stop();
+
+          // TODO: Softcode this cutscene.
+          if (currentSong.id == 'eggnog')
+          {
+            var blackBG:FunkinSprite = new FunkinSprite(-FlxG.width * FlxG.camera.zoom, -FlxG.height * FlxG.camera.zoom);
+            blackBG.makeSolidColor(FlxG.width * 3, FlxG.height * 3, FlxColor.BLACK);
+            blackBG.scrollFactor.set();
+            add(blackBG);
+            camHUD.visible = false;
+            isInCutscene = true;
+
+            FunkinSound.playOnce(Paths.sound('Lights_Shut_off'), function() {
+              // no camFollow so it centers on horror tree
+              var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId);
+              LoadingState.loadPlayState(
+                {
+                  targetSong: targetSong,
+                  targetDifficulty: PlayStatePlaylist.campaignDifficulty,
+                  targetVariation: currentVariation,
+                  cameraFollowPoint: cameraFollowPoint.getPosition(),
+                });
+            });
+          }
+          else
+          {
+            var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId);
+            var targetVariation:String = currentVariation;
+            if (!targetSong.hasDifficulty(PlayStatePlaylist.campaignDifficulty, currentVariation))
+            {
+              targetVariation = targetSong.getFirstValidVariation(PlayStatePlaylist.campaignDifficulty) ?? Constants.DEFAULT_VARIATION;
+            }
+            this.remove(currentStage);
+            LoadingState.loadPlayState(
+              {
+                targetSong: targetSong,
+                targetDifficulty: PlayStatePlaylist.campaignDifficulty,
+                targetVariation: targetVariation,
+                cameraFollowPoint: cameraFollowPoint.getPosition(),
+              });
+          }
+        }
+      }
+      else
+      {
         if (isSubState)
         {
           this.close();
@@ -3286,738 +3530,676 @@ class PlayState extends MusicBeatSubState
         {
           if (rightGoddamnNow)
           {
-            moveToResultsScreen(isNewHighscore);
+            moveToResultsScreen(isNewHighscore, prevScoreData);
           }
           else
           {
-            zoomIntoResultsScreen(isNewHighscore);
+            moveToResultsScreen(isNewHighscore, prevScoreData);
           }
         }
       }
-      else
-      {
-        var difficulty:String = '';
-
-        trace('Loading next song ($targetSongId : $difficulty)');
-
-        FlxTransitionableState.skipNextTransIn = true;
-        FlxTransitionableState.skipNextTransOut = true;
-
-        if (FlxG.sound.music != null) FlxG.sound.music.stop();
-        vocals.stop();
-
-        // TODO: Softcode this cutscene.
-        if (currentSong.id == 'eggnog')
-        {
-          var blackBG:FunkinSprite = new FunkinSprite(-FlxG.width * FlxG.camera.zoom, -FlxG.height * FlxG.camera.zoom);
-          blackBG.makeSolidColor(FlxG.width * 3, FlxG.height * 3, FlxColor.BLACK);
-          blackBG.scrollFactor.set();
-          add(blackBG);
-          camHUD.visible = false;
-          isInCutscene = true;
-
-          FunkinSound.playOnce(Paths.sound('Lights_Shut_off'), function() {
-            // no camFollow so it centers on horror tree
-            var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId);
-            LoadingState.loadPlayState(
-              {
-                targetSong: targetSong,
-                targetDifficulty: PlayStatePlaylist.campaignDifficulty,
-                targetVariation: currentVariation,
-                cameraFollowPoint: cameraFollowPoint.getPosition(),
-              });
-          });
-        }
-        else
-        {
-          var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId);
-          LoadingState.loadPlayState(
-            {
-              targetSong: targetSong,
-              targetDifficulty: PlayStatePlaylist.campaignDifficulty,
-              targetVariation: currentVariation,
-              cameraFollowPoint: cameraFollowPoint.getPosition(),
-            });
-        }
-      }
     }
-    else
+
+    public override function close():Void
     {
-      if (isSubState)
+      criticalFailure = true; // Stop game updates.
+      performCleanup();
+      super.close();
+    }
+
+    /**
+       * Perform necessary cleanup before leaving the PlayState.
+       */
+    function performCleanup():Void
+    {
+      // If the camera is being tweened, stop it.
+      cancelAllCameraTweens();
+
+      // Dispatch the destroy event.
+      dispatchEvent(new ScriptEvent(DESTROY, false));
+
+      if (currentConversation != null)
       {
-        this.close();
+        remove(currentConversation);
+        currentConversation.kill();
+      }
+
+      if (currentChart != null)
+      {
+        // TODO: Uncache the song.
+      }
+
+      if (overrideMusic)
+      {
+        // Stop the music. Do NOT destroy it, something still references it!
+        if (FlxG.sound.music != null) FlxG.sound.music.pause();
+        if (vocals != null)
+        {
+          vocals.pause();
+          remove(vocals);
+        }
       }
       else
       {
-        if (rightGoddamnNow)
+        // Stop and destroy the music.
+        if (FlxG.sound.music != null) FlxG.sound.music.pause();
+        if (vocals != null)
         {
-          moveToResultsScreen(isNewHighscore);
-        }
-        else
-        {
-          zoomIntoResultsScreen(isNewHighscore);
+          vocals.destroy();
+          remove(vocals);
         }
       }
-    }
-  }
 
-  public override function close():Void
-  {
-    criticalFailure = true; // Stop game updates.
-    performCleanup();
-    super.close();
-  }
-
-  /**
-     * Perform necessary cleanup before leaving the PlayState.
-     */
-  function performCleanup():Void
-  {
-    // If the camera is being tweened, stop it.
-    cancelAllCameraTweens();
-
-    // Dispatch the destroy event.
-    dispatchEvent(new ScriptEvent(DESTROY, false));
-
-    if (currentConversation != null)
-    {
-      remove(currentConversation);
-      currentConversation.kill();
-    }
-
-    if (currentChart != null)
-    {
-      // TODO: Uncache the song.
-    }
-
-    if (overrideMusic)
-    {
-      // Stop the music. Do NOT destroy it, something still references it!
-      if (FlxG.sound.music != null) FlxG.sound.music.pause();
-      if (vocals != null)
+      // Remove reference to stage and remove sprites from it to save memory.
+      if (currentStage != null)
       {
-        vocals.pause();
-        remove(vocals);
+        remove(currentStage);
+        currentStage.kill();
+        currentStage = null;
       }
+
+      GameOverSubState.reset();
+      PauseSubState.reset();
+
+      Countdown.reset();
+      // Clear the static reference to this state.
+      instance = null;
     }
-    else
+
+    /**
+       * Play the camera zoom animation and then move to the results screen once it's done.
+       */
+    function zoomIntoResultsScreen(isNewHighscore:Bool, ?prevScoreData:SaveScoreData):Void
     {
-      // Stop and destroy the music.
-      if (FlxG.sound.music != null) FlxG.sound.music.pause();
-      if (vocals != null)
-      {
-        vocals.destroy();
-        remove(vocals);
-      }
-    }
+      trace('WENT TO RESULTS SCREEN!');
 
-    // Remove reference to stage and remove sprites from it to save memory.
-    if (currentStage != null)
-    {
-      remove(currentStage);
-      currentStage.kill();
-      currentStage = null;
-    }
+      // Stop camera zooming on beat.
+      cameraZoomRate = 0;
 
-    GameOverSubState.reset();
-    PauseSubState.reset();
+      // Cancel camera tweening if it's active.
+      cancelAllCameraTweens();
+      cancelScrollSpeedTweens();
 
-    // Clear the static reference to this state.
-    instance = null;
-  }
+      // If the opponent is GF, zoom in on the opponent.
+      // Else, if there is no GF, zoom in on BF.
+      // Else, zoom in on GF.
+      var targetDad:Bool = currentStage.getDad() != null && currentStage.getDad().characterId == 'gf';
+      var targetBF:Bool = currentStage.getGirlfriend() == null && !targetDad;
 
-  /**
-     * Play the camera zoom animation and then move to the results screen once it's done.
-     */
-  function zoomIntoResultsScreen(isNewHighscore:Bool):Void
-  {
-    trace('WENT TO RESULTS SCREEN!');
-
-    // Stop camera zooming on beat.
-    cameraZoomRate = 0;
-
-    // Cancel camera tweening if it's active.
-    cancelAllCameraTweens();
-
-    // If the opponent is GF, zoom in on the opponent.
-    // Else, if there is no GF, zoom in on BF.
-    // Else, zoom in on GF.
-    var targetDad:Bool = currentStage.getDad() != null && currentStage.getDad().characterId == 'gf';
-    var targetBF:Bool = currentStage.getGirlfriend() == null && !targetDad;
-
-    if (targetBF)
-    {
-      FlxG.camera.follow(currentStage.getBoyfriend(), null, 0.05);
-    }
-    else if (targetDad)
-    {
-      FlxG.camera.follow(currentStage.getDad(), null, 0.05);
-    }
-    else
-    {
-      FlxG.camera.follow(currentStage.getGirlfriend(), null, 0.05);
-    }
-
-    // TODO: Make target offset configurable.
-    // In the meantime, we have to replace the zoom animation with a fade out.
-    FlxG.camera.targetOffset.y -= 350;
-    FlxG.camera.targetOffset.x += 20;
-
-    // Replace zoom animation with a fade out for now.
-    camGame.fade(FlxColor.BLACK, 0.6);
-
-    FlxTween.tween(camHUD, {alpha: 0}, 0.6,
-      {
-        onComplete: function(_) {
-          moveToResultsScreen(isNewHighscore);
-        }
-      });
-
-    // Zoom in on Girlfriend (or BF if no GF)
-    new FlxTimer().start(0.8, function(_) {
       if (targetBF)
       {
-        currentStage.getBoyfriend().animation.play('hey');
+        FlxG.camera.follow(currentStage.getBoyfriend(), null, 0.05);
       }
       else if (targetDad)
       {
-        currentStage.getDad().animation.play('cheer');
+        FlxG.camera.follow(currentStage.getDad(), null, 0.05);
       }
       else
       {
-        currentStage.getGirlfriend().animation.play('cheer');
+        FlxG.camera.follow(currentStage.getGirlfriend(), null, 0.05);
       }
 
-      // Zoom over to the Results screen.
-      // TODO: Re-enable this.
-      /*
-          FlxTween.tween(FlxG.camera, {zoom: 1200}, 1.1,
-            {
-              ease: FlxEase.expoIn,
-            });
-         */
-    });
-  }
+      // TODO: Make target offset configurable.
+      // In the meantime, we have to replace the zoom animation with a fade out.
+      FlxG.camera.targetOffset.y -= 350;
+      FlxG.camera.targetOffset.x += 20;
+      // Replace zoom animation with a fade out for now.
+      FlxG.camera.fade(FlxColor.BLACK, 0.6);
 
-  /**
-     * Move to the results screen right goddamn now.
-     */
-  function moveToResultsScreen(isNewHighscore:Bool, ?prevScoreData:SaveScoreData):Void
-  {
-    persistentUpdate = false;
-    vocals.stop();
-    camHUD.alpha = 1;
+      // Replace zoom animation with a fade out for now.
+      camGame.fade(FlxColor.BLACK, 0.6);
 
-    var talliesToUse:Tallies = PlayStatePlaylist.isStoryMode ? Highscore.talliesLevel : Highscore.tallies;
-
-    var res:ResultState = new ResultState(
-      {
-        storyMode: PlayStatePlaylist.isStoryMode,
-        songId: currentChart.song.id,
-        difficultyId: currentDifficulty,
-        title: PlayStatePlaylist.isStoryMode ? ('${PlayStatePlaylist.campaignTitle}') : ('${currentChart.songName} by ${currentChart.songArtist}'),
-        prevScoreData: prevScoreData,
-        scoreData:
-          {
-            score: PlayStatePlaylist.isStoryMode ? PlayStatePlaylist.campaignScore : songScore,
-            tallies:
-              {
-                killer: talliesToUse.killer,
-                sick: talliesToUse.sick,
-                good: talliesToUse.good,
-                bad: talliesToUse.bad,
-                shit: talliesToUse.shit,
-                missed: talliesToUse.missed,
-                combo: talliesToUse.combo,
-                maxCombo: talliesToUse.maxCombo,
-                totalNotesHit: talliesToUse.totalNotesHit,
-                totalNotes: talliesToUse.totalNotes,
-              },
-          },
-        isNewHighscore: isNewHighscore
-      });
-    this.persistentDraw = false;
-    openSubState(res);
-  }
-
-  /**
-     * Pauses music and vocals easily.
-     */
-  public function pauseMusic():Void
-  {
-    if (FlxG.sound.music != null) FlxG.sound.music.pause();
-    if (vocals != null) vocals.pause();
-  }
-
-  /**
-     * Resets the camera's zoom level and focus point.
-     */
-  public function resetCamera(?resetZoom:Bool = true, ?cancelTweens:Bool = true):Void
-  {
-    // Cancel camera tweens if any are active.
-    if (cancelTweens)
-    {
-      cancelAllCameraTweens();
-    }
-
-    FlxG.camera.follow(cameraFollowPoint, LOCKON, 0.04);
-    FlxG.camera.targetOffset.set();
-
-    if (resetZoom)
-    {
-      resetCameraZoom();
-    }
-
-    // Snap the camera to the follow point immediately.
-    FlxG.camera.focusOn(cameraFollowPoint.getPosition());
-  }
-
-  /**
-     * Sets the camera follow point's position and tweens the camera there.
-     */
-  public function tweenCameraToPosition(?x:Float, ?y:Float, ?duration:Float, ?ease:Null<Float->Float>):Void
-  {
-    cameraFollowPoint.setPosition(x, y);
-    tweenCameraToFollowPoint(duration, ease);
-  }
-
-  /**
-     * Disables camera following and tweens the camera to the follow point manually.
-     */
-  public function tweenCameraToFollowPoint(?duration:Float, ?ease:Null<Float->Float>):Void
-  {
-    // Cancel the current tween if it's active.
-    cancelCameraFollowTween();
-
-    if (duration == 0)
-    {
-      // Instant movement. Just reset the camera to force it to the follow point.
-      resetCamera(false, false);
-    }
-    else
-    {
-      // Disable camera following for the duration of the tween.
-      FlxG.camera.target = null;
-
-      // Follow tween! Caching it so we can cancel/pause it later if needed.
-      var followPos:FlxPoint = cameraFollowPoint.getPosition() - FlxPoint.weak(FlxG.camera.width * 0.5, FlxG.camera.height * 0.5);
-      cameraFollowTween = FlxTween.tween(FlxG.camera.scroll, {x: followPos.x, y: followPos.y}, duration,
+      FlxTween.tween(camHUD, {alpha: 0}, 0.6,
         {
-          ease: ease,
           onComplete: function(_) {
-            resetCamera(false, false); // Re-enable camera following when the tween is complete.
+            moveToResultsScreen(isNewHighscore, prevScoreData);
           }
         });
-    }
-  }
 
-  public function cancelCameraFollowTween()
-  {
-    if (cameraFollowTween != null)
-    {
-      cameraFollowTween.cancel();
-    }
-  }
+      // Zoom in on Girlfriend (or BF if no GF)
+      new FlxTimer().start(0.8, function(_) {
+        if (targetBF)
+        {
+          currentStage.getBoyfriend().animation.play('hey');
+        }
+        else if (targetDad)
+        {
+          currentStage.getDad().animation.play('cheer');
+        }
+        else
+        {
+          currentStage.getGirlfriend().animation.play('cheer');
+        }
 
-  /**
-     * Tweens the camera zoom to the desired amount.
-     */
-  public function tweenCameraZoom(?zoom:Float, ?duration:Float, ?direct:Bool, ?ease:Null<Float->Float>):Void
-  {
-    // Cancel the current tween if it's active.
-    cancelCameraZoomTween();
-
-    // Direct mode: Set zoom directly.
-    // Stage mode: Set zoom as a multiplier of the current stage's default zoom.
-    var targetZoom = zoom * (direct ? FlxCamera.defaultZoom : stageZoom);
-
-    if (duration == 0)
-    {
-      // Instant zoom. No tween needed.
-      currentCameraZoom = targetZoom;
-    }
-    else
-    {
-      // Zoom tween! Caching it so we can cancel/pause it later if needed.
-      cameraZoomTween = FlxTween.tween(this, {currentCameraZoom: targetZoom}, duration, {ease: ease});
-    }
-  }
-
-  public function cancelCameraZoomTween()
-  {
-    if (cameraZoomTween != null)
-    {
-      cameraZoomTween.cancel();
-    }
-  }
-
-  // Better optimized than using some getProperty shit or idk psych engine lua shit for things
-  function getFlxEaseByString(?ease:String = '')
-  {
-    switch (ease)
-    {
-      case 'backin':
-        return FlxEase.backIn;
-      case 'backinout':
-        return FlxEase.backInOut;
-      case 'backout':
-        return FlxEase.backOut;
-      case 'bouncein':
-        return FlxEase.bounceIn;
-      case 'bounceinout':
-        return FlxEase.bounceInOut;
-      case 'bounceout':
-        return FlxEase.bounceOut;
-      case 'circin':
-        return FlxEase.circIn;
-      case 'circinout':
-        return FlxEase.circInOut;
-      case 'circout':
-        return FlxEase.circOut;
-      case 'cubein':
-        return FlxEase.cubeIn;
-      case 'cubeinout':
-        return FlxEase.cubeInOut;
-      case 'cubeout':
-        return FlxEase.cubeOut;
-      case 'elasticin':
-        return FlxEase.elasticIn;
-      case 'elasticinout':
-        return FlxEase.elasticInOut;
-      case 'elasticout':
-        return FlxEase.elasticOut;
-      case 'expoin':
-        return FlxEase.expoIn;
-      case 'expoinout':
-        return FlxEase.expoInOut;
-      case 'expoout':
-        return FlxEase.expoOut;
-      case 'quadin':
-        return FlxEase.quadIn;
-      case 'quadinout':
-        return FlxEase.quadInOut;
-      case 'quadout':
-        return FlxEase.quadOut;
-      case 'quartin':
-        return FlxEase.quartIn;
-      case 'quartinout':
-        return FlxEase.quartInOut;
-      case 'quartout':
-        return FlxEase.quartOut;
-      case 'quintin':
-        return FlxEase.quintIn;
-      case 'quintinout':
-        return FlxEase.quintInOut;
-      case 'quintout':
-        return FlxEase.quintOut;
-      case 'sinein':
-        return FlxEase.sineIn;
-      case 'sineinout':
-        return FlxEase.sineInOut;
-      case 'sineout':
-        return FlxEase.sineOut;
-      case 'smoothstepin':
-        return FlxEase.smoothStepIn;
-      case 'smoothstepinout':
-        return FlxEase.smoothStepInOut;
-      case 'smoothstepout':
-        return FlxEase.smoothStepInOut;
-      case 'smootherstepin':
-        return FlxEase.smootherStepIn;
-      case 'smootherstepinout':
-        return FlxEase.smootherStepInOut;
-      case 'smootherstepout':
-        return FlxEase.smootherStepOut;
-    }
-    return FlxEase.linear;
-  }
-
-  /**
-     * Cancel all active camera tweens simultaneously.
-     */
-  public function cancelAllCameraTweens()
-  {
-    cancelCameraFollowTween();
-    cancelCameraZoomTween();
-  }
-
-  /**
-     * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
-     */
-  public function tweennotey(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
-  {
-    // Cancel the current tween if it's active.
-    // cancelnoteTweens();
-    if (noteTweens != null)
-    {
-      noteTweens.cancel();
+        // Zoom over to the Results screen.
+        // TODO: Re-enable this.
+        /*
+            FlxTween.tween(FlxG.camera, {zoom: 1200}, 1.1,
+              {
+                ease: FlxEase.expoIn,
+              });
+           */
+      });
     }
 
-    switch (strum)
+    /**
+       * Move to the results screen right goddamn now.
+       */
+    function moveToResultsScreen(isNewHighscore:Bool, ?prevScoreData:SaveScoreData):Void
     {
-      case('player'):
-        for (note in playerStrumline.notes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
+      persistentUpdate = false;
+      vocals.stop();
+      camHUD.alpha = 1;
 
-        for (note in playerStrumline.strumlineNotes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (splash in playerStrumline.noteSplashes.members)
-        {
-          if (splash.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(splash, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (hold in playerStrumline.noteHoldCovers.members)
-        {
-          if (hold.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(hold, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-      case('opponent'):
-        for (note in opponentStrumline.notes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
+      var talliesToUse:Tallies = PlayStatePlaylist.isStoryMode ? Highscore.talliesLevel : Highscore.tallies;
 
-        for (note in opponentStrumline.strumlineNotes.members)
+      var res:ResultState = new ResultState(
         {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (splash in opponentStrumline.noteSplashes.members)
-        {
-          if (splash.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(splash, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (hold in opponentStrumline.noteHoldCovers.members)
-        {
-          if (hold.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(hold, {y: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-    }
-  }
-
-  /**
-     * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
-     */
-  public function tweennotex(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
-  {
-    switch (strum)
-    {
-      case('player'):
-        for (note in playerStrumline.notes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-
-        for (note in playerStrumline.strumlineNotes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (splash in playerStrumline.noteSplashes.members)
-        {
-          if (splash.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(splash, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (hold in playerStrumline.noteHoldCovers.members)
-        {
-          if (hold.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(hold, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-      case('opponent'):
-        for (note in opponentStrumline.notes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-
-        for (note in opponentStrumline.strumlineNotes.members)
-        {
-          if (note.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(note, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (splash in opponentStrumline.noteSplashes.members)
-        {
-          if (splash.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(splash, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-        for (hold in opponentStrumline.noteHoldCovers.members)
-        {
-          if (hold.ID == notenumber)
-          {
-            noteTweens = FlxTween.tween(hold, {x: value}, duration,
-              {
-                ease: getFlxEaseByString(theease)
-              });
-          }
-        }
-    }
-  }
-
-  var prevScrollTargets:Array<Dynamic> = []; // used to snap scroll speed when things go unruely
-
-  /**
-     * The magical function that shall tween the scroll speed.
-     */
-  public function tweenScrollSpeed(?speed:Float, ?duration:Float, ?ease:Null<Float->Float>, strumlines:Array<String>):Void
-  {
-    // Cancel the current tween if it's active.
-    cancelScrollSpeedTweens();
-
-    // Snap to previous event value to prevent the tween breaking when another event cancels the previous tween.
-    for (i in prevScrollTargets)
-    {
-      var value:Float = i[0];
-      var strum:Strumline = Reflect.getProperty(this, i[1]);
-      strum.scrollSpeed = value;
+          storyMode: PlayStatePlaylist.isStoryMode,
+          songId: currentChart.song.id,
+          difficultyId: currentDifficulty,
+          characterId: currentChart.characters.player,
+          title: PlayStatePlaylist.isStoryMode ? ('${PlayStatePlaylist.campaignTitle}') : ('${currentChart.songName} by ${currentChart.songArtist}'),
+          prevScoreData: prevScoreData,
+          scoreData:
+            {
+              score: PlayStatePlaylist.isStoryMode ? PlayStatePlaylist.campaignScore : songScore,
+              tallies:
+                {
+                  killer: talliesToUse.killer,
+                  sick: talliesToUse.sick,
+                  good: talliesToUse.good,
+                  bad: talliesToUse.bad,
+                  shit: talliesToUse.shit,
+                  missed: talliesToUse.missed,
+                  combo: talliesToUse.combo,
+                  maxCombo: talliesToUse.maxCombo,
+                  totalNotesHit: talliesToUse.totalNotesHit,
+                  totalNotes: talliesToUse.totalNotes,
+                },
+            },
+          isNewHighscore: isNewHighscore
+        });
+      this.persistentDraw = false;
+      openSubState(res);
     }
 
-    // for next event, clean array.
-    prevScrollTargets = [];
-
-    for (i in strumlines)
+    /**
+       * Pauses music and vocals easily.
+       */
+    public function pauseMusic():Void
     {
-      var value:Float = speed;
-      var strum:Strumline = Reflect.getProperty(this, i);
+      if (FlxG.sound.music != null) FlxG.sound.music.pause();
+      if (vocals != null) vocals.pause();
+    }
+
+    /**
+       * Resets the camera's zoom level and focus point.
+       */
+    public function resetCamera(?resetZoom:Bool = true, ?cancelTweens:Bool = true):Void
+    {
+      // Cancel camera tweens if any are active.
+      if (cancelTweens)
+      {
+        cancelAllCameraTweens();
+      }
+
+      FlxG.camera.follow(cameraFollowPoint, LOCKON, 0.04);
+      FlxG.camera.targetOffset.set();
+
+      if (resetZoom)
+      {
+        resetCameraZoom();
+      }
+
+      // Snap the camera to the follow point immediately.
+      FlxG.camera.focusOn(cameraFollowPoint.getPosition());
+    }
+
+    /**
+       * Sets the camera follow point's position and tweens the camera there.
+       */
+    public function tweenCameraToPosition(?x:Float, ?y:Float, ?duration:Float, ?ease:Null<Float->Float>):Void
+    {
+      cameraFollowPoint.setPosition(x, y);
+      tweenCameraToFollowPoint(duration, ease);
+    }
+
+    /**
+       * Disables camera following and tweens the camera to the follow point manually.
+       */
+    public function tweenCameraToFollowPoint(?duration:Float, ?ease:Null<Float->Float>):Void
+    {
+      // Cancel the current tween if it's active.
+      cancelCameraFollowTween();
 
       if (duration == 0)
       {
-        strum.scrollSpeed = value;
+        // Instant movement. Just reset the camera to force it to the follow point.
+        resetCamera(false, false);
       }
       else
       {
-        scrollSpeedTweens.push(FlxTween.tween(strum,
+        // Disable camera following for the duration of the tween.
+        FlxG.camera.target = null;
+
+        // Follow tween! Caching it so we can cancel/pause it later if needed.
+        var followPos:FlxPoint = cameraFollowPoint.getPosition() - FlxPoint.weak(FlxG.camera.width * 0.5, FlxG.camera.height * 0.5);
+        cameraFollowTween = FlxTween.tween(FlxG.camera.scroll, {x: followPos.x, y: followPos.y}, duration,
           {
-            'scrollSpeed': value
-          }, duration, {ease: ease}));
+            ease: ease,
+            onComplete: function(_) {
+              resetCamera(false, false); // Re-enable camera following when the tween is complete.
+            }
+          });
       }
-      // make sure charts dont break if the charter is dumb and stupid
-      prevScrollTargets.push([value, i]);
     }
-  }
 
-  public function cancelScrollSpeedTweens()
-  {
-    for (tween in scrollSpeedTweens)
+    public function cancelCameraFollowTween()
     {
-      if (tween != null)
+      if (cameraFollowTween != null)
       {
-        tween.cancel();
+        cameraFollowTween.cancel();
       }
     }
-    scrollSpeedTweens = [];
-  }
 
-  #if (debug || FORCE_DEBUG_VERSION)
-  /**
-     * Jumps forward or backward a number of sections in the song.
-     * Accounts for BPM changes, does not prevent death from skipped notes.
-     * @param sections The number of sections to jump, negative to go backwards.
-     */
-  function changeSection(sections:Int):Void
-  {
-    // FlxG.sound.music.pause();
-
-    var targetTimeSteps:Float = Conductor.instance.currentStepTime + (Conductor.instance.stepsPerMeasure * sections);
-    var targetTimeMs:Float = Conductor.instance.getStepTimeInMs(targetTimeSteps);
-
-    // Don't go back in time to before the song started.
-    targetTimeMs = Math.max(0, targetTimeMs);
-
-    if (FlxG.sound.music != null)
+    /**
+       * Tweens the camera zoom to the desired amount.
+       */
+    public function tweenCameraZoom(?zoom:Float, ?duration:Float, ?direct:Bool, ?ease:Null<Float->Float>):Void
     {
-      FlxG.sound.music.time = targetTimeMs;
+      // Cancel the current tween if it's active.
+      cancelCameraZoomTween();
+
+      // Direct mode: Set zoom directly.
+      // Stage mode: Set zoom as a multiplier of the current stage's default zoom.
+      var targetZoom = zoom * (direct ? FlxCamera.defaultZoom : stageZoom);
+
+      if (duration == 0)
+      {
+        // Instant zoom. No tween needed.
+        currentCameraZoom = targetZoom;
+      }
+      else
+      {
+        // Zoom tween! Caching it so we can cancel/pause it later if needed.
+        cameraZoomTween = FlxTween.tween(this, {currentCameraZoom: targetZoom}, duration, {ease: ease});
+      }
     }
 
-    handleSkippedNotes();
-    SongEventRegistry.handleSkippedEvents(songEvents, Conductor.instance.songPosition);
-    // regenNoteData(FlxG.sound.music.time);
+    public function cancelCameraZoomTween()
+    {
+      if (cameraZoomTween != null)
+      {
+        cameraZoomTween.cancel();
+      }
+    }
 
-    Conductor.instance.update(FlxG.sound?.music?.time ?? 0.0);
+    // Better optimized than using some getProperty shit or idk psych engine lua shit for things
+    function getFlxEaseByString(?ease:String = '')
+    {
+      switch (ease)
+      {
+        case 'backin':
+          return FlxEase.backIn;
+        case 'backinout':
+          return FlxEase.backInOut;
+        case 'backout':
+          return FlxEase.backOut;
+        case 'bouncein':
+          return FlxEase.bounceIn;
+        case 'bounceinout':
+          return FlxEase.bounceInOut;
+        case 'bounceout':
+          return FlxEase.bounceOut;
+        case 'circin':
+          return FlxEase.circIn;
+        case 'circinout':
+          return FlxEase.circInOut;
+        case 'circout':
+          return FlxEase.circOut;
+        case 'cubein':
+          return FlxEase.cubeIn;
+        case 'cubeinout':
+          return FlxEase.cubeInOut;
+        case 'cubeout':
+          return FlxEase.cubeOut;
+        case 'elasticin':
+          return FlxEase.elasticIn;
+        case 'elasticinout':
+          return FlxEase.elasticInOut;
+        case 'elasticout':
+          return FlxEase.elasticOut;
+        case 'expoin':
+          return FlxEase.expoIn;
+        case 'expoinout':
+          return FlxEase.expoInOut;
+        case 'expoout':
+          return FlxEase.expoOut;
+        case 'quadin':
+          return FlxEase.quadIn;
+        case 'quadinout':
+          return FlxEase.quadInOut;
+        case 'quadout':
+          return FlxEase.quadOut;
+        case 'quartin':
+          return FlxEase.quartIn;
+        case 'quartinout':
+          return FlxEase.quartInOut;
+        case 'quartout':
+          return FlxEase.quartOut;
+        case 'quintin':
+          return FlxEase.quintIn;
+        case 'quintinout':
+          return FlxEase.quintInOut;
+        case 'quintout':
+          return FlxEase.quintOut;
+        case 'sinein':
+          return FlxEase.sineIn;
+        case 'sineinout':
+          return FlxEase.sineInOut;
+        case 'sineout':
+          return FlxEase.sineOut;
+        case 'smoothstepin':
+          return FlxEase.smoothStepIn;
+        case 'smoothstepinout':
+          return FlxEase.smoothStepInOut;
+        case 'smoothstepout':
+          return FlxEase.smoothStepInOut;
+        case 'smootherstepin':
+          return FlxEase.smootherStepIn;
+        case 'smootherstepinout':
+          return FlxEase.smootherStepInOut;
+        case 'smootherstepout':
+          return FlxEase.smootherStepOut;
+      }
+      return FlxEase.linear;
+    }
 
-    resyncVocals();
-  }
-  #end
+    /**
+       * Cancel all active camera tweens simultaneously.
+       */
+    public function cancelAllCameraTweens()
+    {
+      cancelCameraFollowTween();
+      cancelCameraZoomTween();
+    }
+
+    /**
+       * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
+       */
+    public function tweennotey(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
+    {
+      // Cancel the current tween if it's active.
+      // cancelnoteTweens();
+      if (noteTweens != null)
+      {
+        noteTweens.cancel();
+      }
+
+      switch (strum)
+      {
+        case('player'):
+          for (note in playerStrumline.notes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+
+          for (note in playerStrumline.strumlineNotes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (splash in playerStrumline.noteSplashes.members)
+          {
+            if (splash.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(splash, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (hold in playerStrumline.noteHoldCovers.members)
+          {
+            if (hold.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(hold, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+        case('opponent'):
+          for (note in opponentStrumline.notes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+
+          for (note in opponentStrumline.strumlineNotes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (splash in opponentStrumline.noteSplashes.members)
+          {
+            if (splash.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(splash, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (hold in opponentStrumline.noteHoldCovers.members)
+          {
+            if (hold.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(hold, {y: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+      }
+    }
+
+    /**
+       * The magical function that shall tween the note. modified from scroolspeedtween   curently unfinished. do not use
+       */
+    public function tweennotex(value:Float, ?duration:Float, ?theease:String, strum:String, notenumber:Int):Void
+    {
+      switch (strum)
+      {
+        case('player'):
+          for (note in playerStrumline.notes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+
+          for (note in playerStrumline.strumlineNotes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (splash in playerStrumline.noteSplashes.members)
+          {
+            if (splash.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(splash, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (hold in playerStrumline.noteHoldCovers.members)
+          {
+            if (hold.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(hold, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+        case('opponent'):
+          for (note in opponentStrumline.notes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+
+          for (note in opponentStrumline.strumlineNotes.members)
+          {
+            if (note.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(note, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (splash in opponentStrumline.noteSplashes.members)
+          {
+            if (splash.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(splash, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+          for (hold in opponentStrumline.noteHoldCovers.members)
+          {
+            if (hold.ID == notenumber)
+            {
+              noteTweens = FlxTween.tween(hold, {x: value}, duration,
+                {
+                  ease: getFlxEaseByString(theease)
+                });
+            }
+          }
+      }
+    }
+
+    var prevScrollTargets:Array<Dynamic> = []; // used to snap scroll speed when things go unruely
+
+    /**
+       * The magical function that shall tween the scroll speed.
+       */
+    public function tweenScrollSpeed(?speed:Float, ?duration:Float, ?ease:Null<Float->Float>, strumlines:Array<String>):Void
+    {
+      // Cancel the current tween if it's active.
+      cancelScrollSpeedTweens();
+
+      // Snap to previous event value to prevent the tween breaking when another event cancels the previous tween.
+      for (i in prevScrollTargets)
+      {
+        var value:Float = i[0];
+        var strum:Strumline = Reflect.getProperty(this, i[1]);
+        strum.scrollSpeed = value;
+      }
+
+      // for next event, clean array.
+      prevScrollTargets = [];
+
+      for (i in strumlines)
+      {
+        var value:Float = speed;
+        var strum:Strumline = Reflect.getProperty(this, i);
+
+        if (duration == 0)
+        {
+          strum.scrollSpeed = value;
+        }
+        else
+        {
+          scrollSpeedTweens.push(FlxTween.tween(strum,
+            {
+              'scrollSpeed': value
+            }, duration, {ease: ease}));
+        }
+        // make sure charts dont break if the charter is dumb and stupid
+        prevScrollTargets.push([value, i]);
+      }
+    }
+
+    public function cancelScrollSpeedTweens()
+    {
+      for (tween in scrollSpeedTweens)
+      {
+        if (tween != null)
+        {
+          tween.cancel();
+        }
+      }
+      scrollSpeedTweens = [];
+    }
+
+    /**
+       * Jumps forward or backward a number of sections in the song.
+       * Accounts for BPM changes, does not prevent death from skipped notes.
+       * @param sections The number of sections to jump, negative to go backwards.
+       */
+    public function changeSection(sections:Int):Void
+    {
+      // FlxG.sound.music.pause();
+
+      var targetTimeSteps:Float = Conductor.instance.currentStepTime + (Conductor.instance.stepsPerMeasure * sections);
+      var targetTimeMs:Float = Conductor.instance.getStepTimeInMs(targetTimeSteps);
+
+      // Don't go back in time to before the song started.
+      targetTimeMs = Math.max(0, targetTimeMs);
+
+      if (FlxG.sound.music != null)
+      {
+        FlxG.sound.music.time = targetTimeMs;
+      }
+
+      handleSkippedNotes();
+      SongEventRegistry.handleSkippedEvents(songEvents, Conductor.instance.songPosition);
+      // regenNoteData(FlxG.sound.music.time);
+
+      Conductor.instance.update(FlxG.sound?.music?.time ?? 0.0);
+
+      resyncVocals();
+    }
 }

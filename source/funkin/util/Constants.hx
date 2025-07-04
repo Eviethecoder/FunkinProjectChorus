@@ -38,6 +38,11 @@ class Constants
   }
 
   /**
+   * The default freeplay style for characters.
+   */
+  public static final DEFAULT_FREEPLAY_STYLE:String = 'bf';
+
+  /**
    * A suffix to add to the game version.
    * Add a suffix to prototype builds and remove it for releases.
    */
@@ -79,7 +84,7 @@ class Constants
   /**
    * Link to download the game on Itch.io.
    */
-  public static final URL_ITCH:String = 'https://ninja-muffin24.itch.io/funkin/purchase';
+  public static final URL_GITHUB:String = 'https://github.com/Eviethecoder/FunkinProjectChorus';
 
   /**
    * Link to the game's page on Kickstarter.
@@ -226,7 +231,7 @@ class Constants
   /**
    * Standardized variations for charts
    */
-  public static final DEFAULT_VARIATION_LIST:Array<String> = ['default', 'erect', 'pico', 'climax'];
+  public static final DEFAULT_VARIATION_LIST:Array<String> = ['climax', 'default', 'erect', 'pico'];
 
   /**
    * The default intensity multiplier for camera bops.

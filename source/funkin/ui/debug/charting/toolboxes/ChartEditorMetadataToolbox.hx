@@ -30,11 +30,13 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
   var inputSongName:TextField;
   var inputSongArtist:TextField;
   var inputSongCharter:TextField;
+  var inputDeathLines:TextField;
   var inputStage:DropDown;
   var inputHudStyle:DropDown;
   var buttonCharacterPlayer:Button;
   var buttonCharacterGirlfriend:Button;
   var buttonCharacterOpponent:Button;
+  var buttonDeath:Button;
   var inputBPM:NumberStepper;
   var labelScrollSpeed:Label;
   var inputScrollSpeed:Slider;
@@ -122,6 +124,19 @@ class ChartEditorMetadataToolbox extends ChartEditorBaseToolbox
     var startingValueHudStyle = ChartEditorDropdowns.populateDropdownWithNoteStyles(inputHudStyle, chartEditorState.currentSongMetadata.playData.hudStyle);
     inputHudStyle.value = startingValueHudStyle;
 
+    inputDeathLines.onChange = function(event:UIEvent) {
+      var valid:Bool = event.target.text != null && event.target.text != '';
+
+      if (valid)
+      {
+        inputDeathLines.removeClass('invalid-value');
+        chartEditorState.currentSongMetadata.playData.death = event.target.text;
+      }
+      else
+      {
+        chartEditorState.currentSongMetadata.playData.death = null;
+      }
+    };
     inputBPM.onChange = function(event:UIEvent) {
       if (event.value == null || event.value <= 0) return;
 

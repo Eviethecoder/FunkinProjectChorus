@@ -131,6 +131,11 @@ class HealthIcon extends FunkinSprite
     initTargetSize();
   }
 
+  function onSetSize(value:FlxPoint):Void
+  {
+    snapToTargetSize();
+  }
+
   function set_characterId(value:Null<String>):String
   {
     if (value == characterId) return value;
@@ -297,6 +302,22 @@ class HealthIcon extends FunkinSprite
       // Ensure the icon is positioned correctly after updating the hitbox.
       this.updatePosition();
     }
+  }
+
+  /*
+   * Immediately snap the health icon to its target size without lerping.
+   */
+  public function snapToTargetSize():Void
+  {
+    if (this.width > this.height)
+    {
+      setGraphicSize(Std.int(HEALTH_ICON_SIZE * this.size.x), 0);
+    }
+    else
+    {
+      setGraphicSize(0, Std.int(HEALTH_ICON_SIZE * this.size.y));
+    }
+    updateHitbox();
   }
 
   inline function initTargetSize():Void

@@ -3,6 +3,8 @@ package funkin.ui.options;
 import flixel.FlxCamera;
 import flixel.FlxObject;
 import flixel.FlxSprite;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import funkin.ui.AtlasText.AtlasFont;
 import funkin.ui.options.OptionsState.Page;
@@ -10,6 +12,7 @@ import funkin.graphics.FunkinCamera;
 import funkin.ui.TextMenuList.TextMenuItem;
 import funkin.audio.FunkinSound;
 import funkin.ui.options.MenuItemEnums;
+import flixel.math.FlxMath;
 import funkin.ui.options.items.CheckboxPreferenceItem;
 import funkin.ui.options.items.NumberPreferenceItem;
 import funkin.ui.options.items.EnumPreferenceItem;
@@ -22,6 +25,13 @@ class PreferencesMenu extends Page
   var menuCamera:FlxCamera;
   var camFollow:FlxObject;
 
+  public static var curSelected:Int = 0;
+
+  private var descBox:FlxSprite;
+  private var descText:FlxText;
+
+  public var optionsArray:Array<String>;
+
   public function new()
   {
     super();
@@ -30,6 +40,7 @@ class PreferencesMenu extends Page
     FlxG.cameras.add(menuCamera, false);
     menuCamera.bgColor = 0x0;
     camera = menuCamera;
+    optionsArray = [];
 
     add(items = new TextMenuList());
     add(preferenceItems = new FlxTypedSpriteGroup<FlxSprite>());
@@ -43,6 +54,17 @@ class PreferencesMenu extends Page
     var margin = 160;
     menuCamera.deadzone.set(0, margin, menuCamera.width, 40);
     menuCamera.minScrollY = 0;
+
+    descBox = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+    descBox.alpha = 0.6;
+    descBox.scrollFactor.set();
+    add(descBox);
+
+    descText = new FlxText(50, 600, 1180, "", 32);
+    descText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    descText.scrollFactor.set();
+    descText.borderSize = 2.4;
+    add(descText);
 
     items.onChange.add(function(selected) {
       camFollow.y = selected.y;
@@ -60,8 +82,9 @@ class PreferencesMenu extends Page
     createPrefItemCheckbox('Downscroll', 'Enable to make notes move downwards', function(value:Bool):Void {
       Preferences.downscroll = value;
     }, Preferences.downscroll);
+
     // Creates a new NumberPreferenceItem set up to handle percentages
-    createPrefItemPercentage('Note hit sound volume', 'Enable to play a click sound when hitting notes', function(value:Int):Void {
+    createPrefItemPercentage('Note hit sound volume', 'Enable to play a sound when hitting notes', function(value:Int):Void {
       Preferences.noteHitSoundVolume = value;
       trace(Preferences.noteHitSoundVolume);
       var hitSound:String = Preferences.noteHitSound;
@@ -76,6 +99,25 @@ class PreferencesMenu extends Page
       Preferences.timebar = value;
     }, Preferences.timebar);
 
+    createPrefItemEnum('HudStyle Overide', 'overides any use of the funkin style with this one. in beta', [
+      Hudstyle.Funkin => "Funkin",
+      Hudstyle.Test1 => "test1",
+      Hudstyle.Test2 => "test2",
+      Hudstyle.Test3 => "Gtest3",
+    ], function(value:String):Void {
+      Preferences.timebar = value;
+    }, Preferences.timebar);
+
+    createPrefItemEnum('Ranking Dificulty',
+      'The Ranking Dificulty. Nightmare only counts Killers. Intended is Killers AND Sick. And pussy is Killer,Sick, And Good', [
+        Rankingtype.Hard => "Nightmare",
+        Rankingtype.Intended => "Intended",
+        Rankingtype.Pussy => "Pussy",
+
+      ], function(value:String):Void {
+        Preferences.rankingtype = value;
+      }, Preferences.rankingtype);
+
     // NoteHitSoundType would be a string enum defined in MenuItemEnums.hx
     createPrefItemEnum('Note hit sound-opponent', 'changes the opponents hit sounds in charter (will be moved to charter later)', [
       NoteHitSoundType.None => "None",
@@ -88,9 +130,8 @@ class PreferencesMenu extends Page
       trace(Preferences.noteHitSoundopp);
       FunkinSound.playOnce(Paths.sound('noteHitSounds/${hitSound}') ?? Paths.sound('noteHitSounds/Psych'),);
     }, Preferences.noteHitSoundopp);
-
     // NoteHitSoundType would be a string enum defined in MenuItemEnums.hx
-    createPrefItemEnum('Note hit sound', 'Enable to play a click sound when hitting notes', [
+    createPrefItemEnum('Note hit sound', 'Enable to play a sound when hitting notes', [
       NoteHitSoundType.None => "None",
       NoteHitSoundType.Psych => "Psych",
       NoteHitSoundType.Beep1 => "Beep1",
@@ -119,11 +160,43 @@ class PreferencesMenu extends Page
     createPrefItemCheckbox('Auto Pause', 'Automatically pause the game when it loses focus', function(value:Bool):Void {
       Preferences.autoPause = value;
     }, Preferences.autoPause);
+    #if web
+    createPrefItemCheckbox('Unlocked Framerate', 'Enable to unlock the framerate', function(value:Bool):Void {
+      Preferences.unlockedFramerate = value;
+    }, Preferences.unlockedFramerate);
+    #else
+    createPrefItemNumber('FPS', 'The maximum framerate that the game targets', function(value:Float) {
+      Preferences.framerate = Std.int(value);
+    }, null, Preferences.framerate, 30, 300, 5, 0);
+    #end
+  }
+
+  function changeItem(change:Int = 0)
+  {
+    curSelected = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
+    descText.text = optionsArray[curSelected];
+    trace(descText.text);
+    trace(curSelected);
+    descText.screenCenter(Y);
+    descText.y += 270;
+    descBox.setPosition(descText.x - 10, descText.y - 10);
+    descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
+    descBox.updateHitbox();
   }
 
   override function update(elapsed:Float):Void
   {
     super.update(elapsed);
+
+    if (controls.UI_UP_P)
+    {
+      changeItem(-1);
+    }
+
+    if (controls.UI_DOWN_P)
+    {
+      changeItem(1);
+    }
 
     // Indent the selected item.
     items.forEach(function(daItem:TextMenuItem) {
@@ -155,13 +228,14 @@ class PreferencesMenu extends Page
 
   function createPrefItemCheckbox(prefName:String, prefDesc:String, onChange:Bool->Void, defaultValue:Bool):Void
   {
-    var checkbox:CheckboxPreferenceItem = new CheckboxPreferenceItem(0, 120 * (items.length - 1 + 1), defaultValue);
+    var checkbox:CheckboxPreferenceItem = new CheckboxPreferenceItem(0, 120 * (items.length - 1 + 1), defaultValue, prefDesc);
 
     items.createItem(0, (120 * items.length) + 30, prefName, AtlasFont.BOLD, function() {
       var value = !checkbox.currentValue;
       onChange(value);
       checkbox.currentValue = value;
-    });
+    }, prefDesc);
+    optionsArray.push(prefDesc);
 
     preferenceItems.add(checkbox);
   }
@@ -179,8 +253,9 @@ class PreferencesMenu extends Page
   function createPrefItemNumber(prefName:String, prefDesc:String, onChange:Float->Void, ?valueFormatter:Float->String, defaultValue:Int, min:Int, max:Int,
       step:Float = 0.1, precision:Int):Void
   {
-    var item = new NumberPreferenceItem(0, (120 * items.length) + 30, prefName, defaultValue, min, max, step, precision, onChange, valueFormatter);
-    items.addItem(prefName, item);
+    var item = new NumberPreferenceItem(0, (120 * items.length) + 30, prefName, defaultValue, min, max, step, precision, prefDesc, onChange, valueFormatter);
+    items.addItem(prefName, item, prefDesc);
+    optionsArray.push(prefDesc);
     preferenceItems.add(item.lefthandText);
   }
 
@@ -199,8 +274,9 @@ class PreferencesMenu extends Page
     var formatter = function(value:Float) {
       return '${value}%';
     };
-    var item = new NumberPreferenceItem(0, (120 * items.length) + 30, prefName, defaultValue, min, max, 10, 0, newCallback, formatter);
-    items.addItem(prefName, item);
+    var item = new NumberPreferenceItem(0, (120 * items.length) + 30, prefName, defaultValue, min, max, 10, 0, prefDesc, newCallback, formatter);
+    items.addItem(prefName, item, prefDesc);
+    optionsArray.push(prefDesc);
     preferenceItems.add(item.lefthandText);
   }
 
@@ -213,7 +289,8 @@ class PreferencesMenu extends Page
   function createPrefItemEnum(prefName:String, prefDesc:String, values:Map<String, String>, onChange:String->Void, defaultValue:String):Void
   {
     var item = new EnumPreferenceItem(0, (120 * items.length) + 30, prefName, values, defaultValue, onChange);
-    items.addItem(prefName, item);
+    items.addItem(prefName, item, prefDesc);
+    optionsArray.push(prefDesc);
     preferenceItems.add(item.lefthandText);
   }
 }

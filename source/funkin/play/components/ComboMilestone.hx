@@ -79,7 +79,7 @@ class ComboMilestone extends FlxTypedSpriteGroup<FlxSprite>
 
   function setupCombo(daCombo:Int)
   {
-    FunkinSound.playOnce(Paths.sound('comboSound'));
+    // FunkinSound.playOnce(Paths.sound('comboSound'));
 
     wasComboSetup = true;
     var loopNum:Int = 0;

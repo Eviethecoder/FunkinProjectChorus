@@ -36,7 +36,7 @@ class SongMenuItem extends FlxSpriteGroup
    * Modify this by calling `init()`
    * If `null`, assume this SongMenuItem is for the "Random Song" option.
    */
-  public var songData(default, null):Null<FreeplaySongData> = null;
+  public var freeplayData(default, null):Null<FreeplaySongData> = null;
 
   public var selected(default, set):Bool;
 
@@ -88,7 +88,7 @@ class SongMenuItem extends FlxSpriteGroup
     super(x, y);
 
     capsule = new FlxSprite();
-    capsule.frames = Paths.getSparrowAtlas('freeplay/freeplayCapsule');
+    capsule.frames = Paths.getSparrowAtlas('freeplay/freeplayCapsule/capsule/freeplayCapsule');
     capsule.animation.addByPrefix('selected', 'mp3 capsule w backing0', 24);
     capsule.animation.addByPrefix('unselected', 'mp3 capsule w backing NOT SELECTED', 24);
     // capsule.animation
@@ -162,7 +162,7 @@ class SongMenuItem extends FlxSpriteGroup
 
     sparkle = new FlxSprite(ranking.x, ranking.y);
     sparkle.frames = Paths.getSparrowAtlas('freeplay/sparkle');
-    sparkle.animation.addByPrefix('sparkle', 'sparkle', 24, false);
+    sparkle.animation.addByPrefix('sparkle', 'sparkle Export0', 24, false);
     sparkle.animation.play('sparkle', true);
     sparkle.scale.set(0.8, 0.8);
     sparkle.blend = BlendMode.ADD;
@@ -210,13 +210,14 @@ class SongMenuItem extends FlxSpriteGroup
     favIconBlurred.frames = Paths.getSparrowAtlas('freeplay/favHeart');
     favIconBlurred.animation.addByPrefix('fav', 'favorite heart', 24, false);
     favIconBlurred.animation.play('fav');
+
     favIconBlurred.setGraphicSize(50, 50);
     favIconBlurred.blend = BlendMode.ADD;
     favIconBlurred.shader = new GaussianBlurShader(1.2);
     favIconBlurred.visible = false;
     add(favIconBlurred);
 
-    favIcon = new FlxSprite(380, 40);
+    favIcon = new FlxSprite(favIconBlurred.x, favIconBlurred.y);
     favIcon.frames = Paths.getSparrowAtlas('freeplay/favHeart');
     favIcon.animation.addByPrefix('fav', 'favorite heart', 24, false);
     favIcon.animation.play('fav');
@@ -421,6 +422,34 @@ class SongMenuItem extends FlxSpriteGroup
     return evilTrail.color;
   }
 
+  public function refreshDisplay():Void
+  {
+    if (freeplayData == null)
+    {
+      songText.text = 'Random';
+      pixelIcon.visible = false;
+      ranking.visible = false;
+      blurredRanking.visible = false;
+      favIcon.visible = false;
+      favIconBlurred.visible = false;
+      newText.visible = false;
+    }
+    else
+    {
+      songText.text = freeplayData.fullSongName;
+      if (freeplayData.songCharacter != null) pixelIcon.setCharacter(freeplayData.songCharacter);
+      pixelIcon.visible = true;
+      updateBPM(Std.int(freeplayData.songStartingBpm) ?? 0);
+      updateDifficultyRating(freeplayData.difficultyRating ?? 0);
+      updateScoringRank(freeplayData.scoringRank);
+      newText.visible = freeplayData.isNew;
+      favIcon.visible = freeplayData.isFav;
+      favIconBlurred.visible = freeplayData.isFav;
+      checkClip();
+    }
+    updateSelected();
+  }
+
   function updateDifficultyRating(newRating:Int):Void
   {
     var ratingPadded:String = newRating < 10 ? '0$newRating' : '$newRating';
@@ -499,24 +528,30 @@ class SongMenuItem extends FlxSpriteGroup
     updateSelected();
   }
 
-  public function init(?x:Float, ?y:Float, songData:Null<FreeplaySongData>):Void
+  public function init(?x:Float, ?y:Float, freeplayData:Null<FreeplaySongData>, ?styleData:FreeplayStyle = null):Void
   {
     if (x != null) this.x = x;
     if (y != null) this.y = y;
-    this.songData = songData;
+    this.freeplayData = freeplayData;
 
-    // Update capsule text.
-    songText.text = songData?.songName ?? 'Random';
-    // Update capsule character.
-    if (songData?.songCharacter != null) pixelIcon.setCharacter(songData.songCharacter);
-    updateBPM(Std.int(songData?.songStartingBpm) ?? 0);
-    updateDifficultyRating(songData?.difficultyRating ?? 0);
-    updateScoringRank(songData?.scoringRank);
-    newText.visible = songData?.isNew;
-    // Update opacity, offsets, etc.
-    updateSelected();
+    // im so mad i have to do this but im pretty sure with the capsules recycling i cant call the new function properly :/
+    // if thats possible someone Please change the new function to be something like
+    // capsule.frames = Paths.getSparrowAtlas(styleData == null ? 'freeplay/freeplayCapsule/capsule/freeplayCapsule' : styleData.getCapsuleAssetKey()); thank u luv u
+    if (styleData != null)
+    {
+      capsule.frames = Paths.getSparrowAtlas(styleData.getCapsuleAssetKey());
+      capsule.animation.addByPrefix('selected', 'mp3 capsule w backing0', 24);
+      capsule.animation.addByPrefix('unselected', 'mp3 capsule w backing NOT SELECTED', 24);
+      songText.applyStyle(styleData);
+    }
 
-    checkWeek(songData?.songId);
+    updateScoringRank(freeplayData?.scoringRank);
+    favIcon.animation.curAnim.curFrame = favIcon.animation.curAnim.numFrames - 1;
+    favIconBlurred.animation.curAnim.curFrame = favIconBlurred.animation.curAnim.numFrames - 1;
+
+    refreshDisplay();
+
+    checkWeek(freeplayData?.data.id);
   }
 
   var frameInTicker:Float = 0;
