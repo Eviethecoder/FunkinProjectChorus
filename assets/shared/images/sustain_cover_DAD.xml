@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="sustain_cover_DAD.png">
+	<!-- Created with Adobe Animate version 21.0.6.41649 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="sustain cover0000" x="0" y="0" width="161" height="125"/>
+	<SubTexture name="sustain cover0001" x="161" y="0" width="161" height="125"/>
+	<SubTexture name="sustain cover0002" x="322" y="0" width="161" height="125"/>
+	<SubTexture name="sustain cover end purp0000" x="483" y="0" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0001" x="483" y="0" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0002" x="739" y="0" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0003" x="0" y="229" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0004" x="0" y="229" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0005" x="256" y="229" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0006" x="512" y="229" width="256" height="229"/>
+	<SubTexture name="sustain cover end purp0007" x="768" y="229" width="256" height="229"/>
+	<SubTexture name="sustain cover loop purple0000" x="0" y="458" width="161" height="125"/>
+	<SubTexture name="sustain cover loop purple0001" x="161" y="458" width="161" height="125"/>
+	<SubTexture name="sustain cover loop purple0002" x="322" y="458" width="161" height="125"/>
+	<SubTexture name="sustain cover loop purple0003" x="0" y="458" width="161" height="125"/>
+</TextureAtlas>
